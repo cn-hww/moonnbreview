@@ -33,7 +33,7 @@ CLI `--policy FILE` may occur once and cannot be combined with inline suppressio
 flags. This prevents silent precedence or accidental broadening of an approved
 policy. Invalid or unreadable policy files exit 2 before a successful report.
 `review`, `check` and `bundle` accept it; `replay` uses the policy already retained
-inside its bundle and refuses extra options.
+inside its bundle; it accepts presentation options but refuses a replacement policy.
 
 The existing `report-1` and `bundle-1` wire formats remain unchanged. A policy file
 is a separate envelope; the exact suppression choices continue to be embedded in

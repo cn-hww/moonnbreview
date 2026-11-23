@@ -48,6 +48,7 @@ pub fn Comparison::passes(Self, blocked? : Array[ChangeKind]) -> Bool
 pub fn Comparison::suppressed(Self) -> Array[Change]
 pub fn Comparison::to_bundle(Self) -> String raise ReviewError
 pub fn Comparison::to_json(Self) -> String raise ReviewError
+pub fn Comparison::to_markdown(Self, preview_chars? : Int32) -> String raise ReviewError
 
 pub struct Document {
   // private fields

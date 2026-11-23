@@ -43,6 +43,11 @@ evidence. `scripts/verify.mbtx` demonstrates this without shell redirection and
 executes the tests and CLI on all four backends, including native execution.
 Reports and bundles contain full notebook content: handle them like the inputs.
 
+For a human-readable review, add `--format markdown` to `review`, `check` or
+`replay`. Markdown retains all change locations and suppression reasons, with
+explicit bounded value previews. It does not replace the full JSON evidence.
+See [Markdown reports](docs/markdown.md) for limits and a complete real-data workflow.
+
 ## Use the library
 
 Import `"cn-hww/moonnbreview" @review` in `moon.pkg`. For checkout development use
@@ -64,6 +69,8 @@ The small public surface consists of `Document`, `Policy`, `compare`,
 - `passes` blocks all active changes by default; callers may select categories.
 - `to_json` emits a full versioned report. `to_bundle` / `from_bundle` provide
   deterministic, recomputed replay. There is no trusted report-import verdict.
+- `to_markdown(preview_chars=240)` presents both active and suppressed changes;
+  long value previews state exactly how many UTF-16 units were omitted.
 
 Change paths are JSON Pointers **relative to the cell identified by `cell_id`**;
 when `cell_id` is null they are relative to the notebook. Added/removed/type-changed

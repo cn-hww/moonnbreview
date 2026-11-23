@@ -17,5 +17,13 @@ test "public notebook review workflow" {
   assert_eq(result.changes()[0].kind, @review.Source)
   let replay = @review.Comparison::from_bundle(result.to_bundle())
   assert_eq(replay.to_json(), result.to_json())
+  let policy_file = @review.Policy::new().to_json()
+  let configured = @review.compare(
+    @review.Document::parse(old),
+    @review.Document::parse(new),
+    policy=@review.Policy::from_json(policy_file),
+  )
+  assert_eq(configured.to_json(), result.to_json())
+  assert_true(configured.to_markdown().contains("Active changes: 1"))
 }
 ```

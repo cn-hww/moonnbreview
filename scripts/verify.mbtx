@@ -31,6 +31,7 @@ async fn main {
   let before = @fs.read_file("fixtures/before.ipynb").text()
   let after = @fs.read_file("fixtures/after.ipynb").text()
   let mut baseline : String? = None
+  let mut markdown_baseline : String? = None
   for target in targets {
     println(command(["test", "--target", target, "--deny-warn"], 0))
     let prefix = ["run", "--target", target, "cmd/main", "--"]
@@ -51,6 +52,19 @@ async fn main {
     repeated.push("--policy")
     repeated.push("fixtures/policy.json")
     ignore(command(repeated, 2))
+    let markdown_args = policy_args.copy()
+    markdown_args.push("--format")
+    markdown_args.push("markdown")
+    let markdown = command(markdown_args, 1).replace(old="\r\n", new="\n")
+    guard markdown.contains("Active changes: 3") && markdown.contains("Suppressed changes: 2") else { fail("Markdown lost the real-fixture summary") }
+    match markdown_baseline {
+      None => markdown_baseline = Some(markdown)
+      Some(value) => { assert_eq(markdown, value) }
+    }
+    let invalid_format = policy_args.copy()
+    invalid_format.push("--format")
+    invalid_format.push("html")
+    ignore(command(invalid_format, 2))
     match baseline {
       None => baseline = Some(normalized_console)
       Some(value) => { guard value == normalized_console else { fail("backend report bytes differ") } }
@@ -69,6 +83,14 @@ async fn main {
     replay.push("replay")
     replay.push(path)
     assert_eq(@json.parse(command(replay, 0)[:]), report)
+    let markdown_replay = replay.copy()
+    markdown_replay.push("--format")
+    markdown_replay.push("markdown")
+    assert_eq(command(markdown_replay, 0).replace(old="\r\n", new="\n"), markdown)
+    let invalid_bundle = bundle_args.copy()
+    invalid_bundle.push("--format")
+    invalid_bundle.push("markdown")
+    ignore(command(invalid_bundle, 2))
     @fs.write_file(path, "{invalid")
     let invalid_policy = prefix.copy()
     for arg in ["check", "fixtures/before.ipynb", "fixtures/before.ipynb", "--policy", path] { invalid_policy.push(arg) }

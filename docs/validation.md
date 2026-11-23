@@ -47,3 +47,12 @@ round trips, exact inline/file report equivalence, bundle compatibility, malform
 and unknown fields, escaped duplicates, Unicode, key limits and recovery. The
 four-backend verifier also executes `--policy` against the real fixture, requires
 identical JSON bytes, and rejects mixed inline/file choices and invalid files.
+
+## Markdown presentation
+
+Ten additional public-API test blocks (48 total) cover deterministic rendering,
+unchanged JSON/bundle evidence, empty and suppressed sections, absent versus null,
+literal Markdown/HTML, adaptive code fences, explicit preview counts, surrogate
+boundaries, control escaping, invalid limits, and atomic oversize refusal. The
+real-data CLI verifier compares Markdown bytes across backends, renders replayed
+bundles, preserves check exit 1, and rejects unsupported formats and Markdown bundles.

@@ -16,17 +16,31 @@ fn arguments() -> Array[String] {
 }
 
 ///|
+fn output_format(text : String) -> String raise {
+  guard text == "json" || text == "markdown" else {
+    fail("--format must be json or markdown")
+  }
+  text
+}
+
+///|
 fn main {
   try {
     let args = arguments()
     guard args.length() >= 2 else {
       fail(
-        "usage: review|check|bundle OLD.ipynb NEW.ipynb [--policy FILE | --ignore-execution-counts --ignore-metadata KEY] | replay BUNDLE.json",
+        "usage: review|check OLD NEW [--policy FILE] [--format json|markdown] | bundle OLD NEW [--policy FILE] | replay BUNDLE [--format json|markdown]",
       )
     }
     let command = args[1]
+    let mut format = "json"
     let comparison = if command == "replay" {
-      guard args.length() == 3 else { fail("usage: replay BUNDLE.json") }
+      guard args.length() == 3 || (args.length() == 5 && args[3] == "--format") else {
+        fail("usage: replay BUNDLE.json [--format json|markdown]")
+      }
+      if args.length() == 5 {
+        format = output_format(args[4])
+      }
       @review.Comparison::from_bundle(read(args[2]))
     } else {
       guard ["review", "check", "bundle"].contains(command) &&
@@ -37,9 +51,18 @@ fn main {
       let keys = []
       let mut policy_path : String? = None
       let mut inline_policy = false
+      let mut explicit_format = false
       let mut i = 4
       while i < args.length() {
         match args[i] {
+          "--format" => {
+            guard !explicit_format && i + 1 < args.length() else {
+              fail("--format requires one value and may occur once")
+            }
+            explicit_format = true
+            i += 1
+            format = output_format(args[i])
+          }
           "--policy" => {
             guard policy_path is None && i + 1 < args.length() else {
               fail("--policy requires one file and may occur once")
@@ -63,6 +86,9 @@ fn main {
         }
         i += 1
       }
+      guard command != "bundle" || !explicit_format else {
+        fail("bundle has a fixed JSON format; omit --format")
+      }
       guard policy_path is None || !inline_policy else {
         fail(
           "--policy cannot be combined with inline policy flags; edit the policy file explicitly",
@@ -84,6 +110,8 @@ fn main {
     }
     let text = if command == "bundle" {
       comparison.to_bundle()
+    } else if format == "markdown" {
+      comparison.to_markdown()
     } else {
       comparison.to_json()
     }
