@@ -1,0 +1,5 @@
+{
+  "format": "moonnbreview/policy-1",
+  "ignore_execution_counts": true,
+  "ignored_metadata_keys": ["execution"]
+}

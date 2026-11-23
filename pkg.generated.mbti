@@ -59,7 +59,9 @@ pub fn Document::to_string(Self) -> String raise ReviewError
 pub struct Policy {
   // private fields
 }
+pub fn Policy::from_json(String) -> Self raise ReviewError
 pub fn Policy::new(ignore_execution_counts? : Bool, ignored_metadata_keys? : Array[String]) -> Self raise ReviewError
+pub fn Policy::to_json(Self) -> String
 
 // Type aliases
 

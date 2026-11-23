@@ -56,6 +56,9 @@ The small public surface consists of `Document`, `Policy`, `compare`,
   `notebook` returns the immutable `moonrockz/notebooks/nbformat` model.
 - `Policy::new` explicitly enables count suppression or exact metadata-key
   suppression. The default suppresses nothing. Caller arrays are copied.
+- `Policy::to_json` / `from_json` persist a strict, versioned policy file for CI.
+  Use `--policy fixtures/policy.json` with `review`, `check` or `bundle`. A policy
+  file cannot be mixed with inline suppression flags; see [policy files](docs/policies.md).
 - `compare` aligns stable IDs and returns an immutable comparison.
 - `changes` and `suppressed` return independent change witnesses.
 - `passes` blocks all active changes by default; callers may select categories.
@@ -134,6 +137,6 @@ This is a complementary review layer over existing notebook models, informed by
 nbdime's workflow. It is not a complete nbdime port, a notebook codec replacement
 or a claim of ecosystem uniqueness. See [research](docs/research.md).
 
-Next coherent capabilities are Git-ref comparison and policy files, followed by
+Next coherent capabilities are Git-ref comparison, followed by
 offline rich-output presentation. Legacy files require a separate, explicit
 identity/ambiguity design. These capabilities are planned, not implemented.

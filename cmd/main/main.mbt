@@ -21,7 +21,7 @@ fn main {
     let args = arguments()
     guard args.length() >= 2 else {
       fail(
-        "usage: review|check|bundle OLD.ipynb NEW.ipynb [--ignore-execution-counts] [--ignore-metadata KEY] | replay BUNDLE.json",
+        "usage: review|check|bundle OLD.ipynb NEW.ipynb [--policy FILE | --ignore-execution-counts --ignore-metadata KEY] | replay BUNDLE.json",
       )
     }
     let command = args[1]
@@ -35,11 +35,24 @@ fn main {
       }
       let mut counts = false
       let keys = []
+      let mut policy_path : String? = None
+      let mut inline_policy = false
       let mut i = 4
       while i < args.length() {
         match args[i] {
-          "--ignore-execution-counts" => counts = true
+          "--policy" => {
+            guard policy_path is None && i + 1 < args.length() else {
+              fail("--policy requires one file and may occur once")
+            }
+            i += 1
+            policy_path = Some(args[i])
+          }
+          "--ignore-execution-counts" => {
+            counts = true
+            inline_policy = true
+          }
           "--ignore-metadata" => {
+            inline_policy = true
             guard i + 1 < args.length() else {
               fail("--ignore-metadata requires an exact key")
             }
@@ -50,13 +63,23 @@ fn main {
         }
         i += 1
       }
+      guard policy_path is None || !inline_policy else {
+        fail(
+          "--policy cannot be combined with inline policy flags; edit the policy file explicitly",
+        )
+      }
+      let policy = match policy_path {
+        Some(path) => @review.Policy::from_json(read(path))
+        None =>
+          @review.Policy::new(
+            ignore_execution_counts=counts,
+            ignored_metadata_keys=keys,
+          )
+      }
       @review.compare(
         @review.Document::parse(read(args[2])),
         @review.Document::parse(read(args[3])),
-        policy=@review.Policy::new(
-          ignore_execution_counts=counts,
-          ignored_metadata_keys=keys,
-        ),
+        policy~,
       )
     }
     let text = if command == "bundle" {

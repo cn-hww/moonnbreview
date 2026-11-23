@@ -41,6 +41,16 @@ async fn main {
     guard report is Object(fields) && fields["changes"] is Array(changes) && fields["suppressed"] is Array(suppressed) else { fail("invalid report") }
     guard changes.length() == 3 && suppressed.length() == 2 else { fail("real fixture lost expected changes") }
     let normalized_console = report_text.replace(old="\r\n", new="\n")
+    let policy_args = prefix.copy()
+    for arg in ["check", "fixtures/before.ipynb", "fixtures/after.ipynb", "--policy", "fixtures/policy.json"] { policy_args.push(arg) }
+    assert_eq(command(policy_args, 1).replace(old="\r\n", new="\n"), normalized_console)
+    let mixed = policy_args.copy()
+    mixed.push("--ignore-execution-counts")
+    ignore(command(mixed, 2))
+    let repeated = policy_args.copy()
+    repeated.push("--policy")
+    repeated.push("fixtures/policy.json")
+    ignore(command(repeated, 2))
     match baseline {
       None => baseline = Some(normalized_console)
       Some(value) => { guard value == normalized_console else { fail("backend report bytes differ") } }
@@ -49,7 +59,7 @@ async fn main {
     for arg in ["check", "fixtures/before.ipynb", "fixtures/before.ipynb"] { same.push(arg) }
     ignore(command(same, 0))
     let bundle_args = prefix.copy()
-    for arg in ["bundle", "fixtures/before.ipynb", "fixtures/after.ipynb", "--ignore-execution-counts", "--ignore-metadata", "execution"] { bundle_args.push(arg) }
+    for arg in ["bundle", "fixtures/before.ipynb", "fixtures/after.ipynb", "--policy", "fixtures/policy.json"] { bundle_args.push(arg) }
     let bundle = command(bundle_args, 0)
     let dir = @fs.tmpdir(prefix="moonnbreview-")
     defer @fs.rmdir(dir, recursive=true)
@@ -60,6 +70,9 @@ async fn main {
     replay.push(path)
     assert_eq(@json.parse(command(replay, 0)[:]), report)
     @fs.write_file(path, "{invalid")
+    let invalid_policy = prefix.copy()
+    for arg in ["check", "fixtures/before.ipynb", "fixtures/before.ipynb", "--policy", path] { invalid_policy.push(arg) }
+    ignore(command(invalid_policy, 2))
     let invalid = prefix.copy()
     for arg in ["review", path, "fixtures/before.ipynb"] { invalid.push(arg) }
     ignore(command(invalid, 2))

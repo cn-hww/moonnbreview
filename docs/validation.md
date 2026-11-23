@@ -39,3 +39,11 @@ The project's own tests are not an exhaustive notebook-format conformance suite.
 
 Deferred capabilities: execution, automatic merge, legacy matching, browser UI,
 Git-ref comparison, report-import approval and package-registry publication.
+
+## Versioned policy files
+
+The policy-file capability adds seven public-API test blocks (38 total), including
+round trips, exact inline/file report equivalence, bundle compatibility, malformed
+and unknown fields, escaped duplicates, Unicode, key limits and recovery. The
+four-backend verifier also executes `--policy` against the real fixture, requires
+identical JSON bytes, and rejects mixed inline/file choices and invalid files.
