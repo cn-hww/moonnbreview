@@ -1,0 +1,9 @@
+import {
+  "moonrockz/notebooks/nbformat",
+  "moonbitlang/core/json",
+}
+
+import {
+  "cn-hww/moonnbreview" @review,
+  "moonbitlang/core/json",
+} for "test"

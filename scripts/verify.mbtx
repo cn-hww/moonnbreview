@@ -1,0 +1,71 @@
+----
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/env",
+}
+----
+
+async fn command(args : Array[String], expected : Int32) -> String {
+  let result = @shell.Cmd("moon", args).output()
+  guard result.exit_code() == expected else {
+    println(result.stdout())
+    println(result.stderr())
+    fail("unexpected exit from moon " + args.join(" "))
+  }
+  result.stdout()
+}
+
+async fn main {
+  let args = @env.args()
+  guard args.length() == 1 || args == [args[0], "--portable"] || args == [args[0], "--native"] else { fail("usage: verify.mbtx [--portable|--native]") }
+  let targets = if args.length() == 2 && args[1] == "--portable" { ["wasm", "wasm-gc", "js"] } else if args.length() == 2 { ["native"] } else { ["wasm", "wasm-gc", "js", "native"] }
+  for path in ["scripts/verify.mbtx", "scripts/prepare-fixture.mbtx"] {
+    ignore(command(["fmt", path], 0))
+  }
+  for args in [["fmt"], ["info"], ["check", "--target", "all", "--deny-warn"]] {
+    println(command(args, 0))
+  }
+  let before = @fs.read_file("fixtures/before.ipynb").text()
+  let after = @fs.read_file("fixtures/after.ipynb").text()
+  let mut baseline : String? = None
+  for target in targets {
+    println(command(["test", "--target", target, "--deny-warn"], 0))
+    let prefix = ["run", "--target", target, "cmd/main", "--"]
+    let args = prefix.copy()
+    for arg in ["check", "fixtures/before.ipynb", "fixtures/after.ipynb", "--ignore-execution-counts", "--ignore-metadata", "execution"] { args.push(arg) }
+    let report_text = command(args, 1)
+    let report = @json.parse(report_text[:])
+    guard report is Object(fields) && fields["changes"] is Array(changes) && fields["suppressed"] is Array(suppressed) else { fail("invalid report") }
+    guard changes.length() == 3 && suppressed.length() == 2 else { fail("real fixture lost expected changes") }
+    let normalized_console = report_text.replace(old="\r\n", new="\n")
+    match baseline {
+      None => baseline = Some(normalized_console)
+      Some(value) => { guard value == normalized_console else { fail("backend report bytes differ") } }
+    }
+    let same = prefix.copy()
+    for arg in ["check", "fixtures/before.ipynb", "fixtures/before.ipynb"] { same.push(arg) }
+    ignore(command(same, 0))
+    let bundle_args = prefix.copy()
+    for arg in ["bundle", "fixtures/before.ipynb", "fixtures/after.ipynb", "--ignore-execution-counts", "--ignore-metadata", "execution"] { bundle_args.push(arg) }
+    let bundle = command(bundle_args, 0)
+    let dir = @fs.tmpdir(prefix="moonnbreview-")
+    defer @fs.rmdir(dir, recursive=true)
+    let path = dir + "/review.json"
+    @fs.write_file(path, bundle)
+    let replay = prefix.copy()
+    replay.push("replay")
+    replay.push(path)
+    assert_eq(@json.parse(command(replay, 0)[:]), report)
+    @fs.write_file(path, "{invalid")
+    let invalid = prefix.copy()
+    for arg in ["review", path, "fixtures/before.ipynb"] { invalid.push(arg) }
+    ignore(command(invalid, 2))
+    println("Executed library and CLI including gate 0/1/2 and bundle replay on " + target)
+  }
+  assert_eq(@fs.read_file("fixtures/before.ipynb").text(), before)
+  assert_eq(@fs.read_file("fixtures/after.ipynb").text(), after)
+  println("Verification passed on " + targets.join(", ") + "; source fixtures unchanged.")
+}

@@ -1,0 +1,34 @@
+----
+import {
+  "moonbitlang/x@0.5.5/fs",
+  "moonbitlang/core/json",
+}
+----
+
+fn main raise {
+  let raw = @fs.read_file_to_string("fixtures/upstream/test4.ipynb")
+  guard @json.parse(raw[:], preserve_number_repr=true) is Object(root) && root["cells"] is Array(cells) else { fail("unexpected upstream fixture") }
+  root["nbformat_minor"] = 5
+  for i, cell in cells {
+    guard cell is Object(fields) else { fail("invalid cell") }
+    fields["id"] = Json("fixture-cell-" + i.to_string())
+  }
+  @fs.write_string_to_file("fixtures/before.ipynb", Json(root).stringify(indent=1))
+  guard cells[0] is Object(first) && first["source"] is Array(lines) else { fail("unexpected first cell") }
+  lines.push(Json("\n\nExplicitly simulated editorial revision."))
+  first["metadata"] = { "execution": { "timestamp": "simulated-new-run" } }
+  for cell in cells {
+    guard cell is Object(fields) else { fail("invalid cell") }
+    if fields.get("cell_type") == Some(Json("code")) {
+      fields["execution_count"] = 99
+      guard fields["outputs"] is Array(outputs) else { fail("missing outputs") }
+      outputs.push({ "output_type": "stream", "name": "stdout", "text": "Simulated changed output\n" })
+      break
+    }
+  }
+  let first_cell = cells[0]
+  cells[0] = cells[1]
+  cells[1] = first_cell
+  @fs.write_string_to_file("fixtures/after.ipynb", Json(root).stringify(indent=1))
+  println("Prepared format-4.5 fixture: explicit IDs and version upgrade; simulated edits are labeled.")
+}

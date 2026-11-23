@@ -1,0 +1,66 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "cn-hww/moonnbreview"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonrockz/notebooks/nbformat",
+}
+
+// Values
+pub fn compare(Document, Document, policy? : Policy) -> Comparison raise ReviewError
+
+// Errors
+#derive(Eq, @debug.Debug)
+pub suberror ReviewError {
+  Invalid(String)
+}
+
+// Types and methods
+#derive(@debug.Debug)
+pub struct Change {
+  kind : ChangeKind
+  cell_id : String?
+  path : String
+  before : @json.Json?
+  after : @json.Json?
+  suppressed_by : String?
+}
+
+#derive(Eq, @debug.Debug)
+pub(all) enum ChangeKind {
+  Structure
+  Order
+  Source
+  Output
+  Attachment
+  Metadata
+  ExecutionCount
+  Extension
+}
+
+pub struct Comparison {
+  // private fields
+}
+pub fn Comparison::changes(Self) -> Array[Change]
+pub fn Comparison::from_bundle(String) -> Self raise ReviewError
+pub fn Comparison::passes(Self, blocked? : Array[ChangeKind]) -> Bool
+pub fn Comparison::suppressed(Self) -> Array[Change]
+pub fn Comparison::to_bundle(Self) -> String raise ReviewError
+pub fn Comparison::to_json(Self) -> String raise ReviewError
+
+pub struct Document {
+  // private fields
+}
+pub fn Document::notebook(Self) -> @nbformat.Notebook
+pub fn Document::parse(String) -> Self raise ReviewError
+pub fn Document::to_string(Self) -> String raise ReviewError
+
+pub struct Policy {
+  // private fields
+}
+pub fn Policy::new(ignore_execution_counts? : Bool, ignored_metadata_keys? : Array[String]) -> Self raise ReviewError
+
+// Type aliases
+
+// Traits
