@@ -448,3 +448,30 @@ test "report optional identity and suppression reason use strings or null" {
   assert_eq(witness["cell_id"], Json("a"))
   assert_eq(witness["suppressed_by"], Json("ignore_execution_counts"))
 }
+
+///|
+test "pointers escape every slash and tilde including repeated runs" {
+  let c = compare(
+    notebook([], metadata={ "/a/b//~x~~": 1 }),
+    notebook([], metadata={ "/a/b//~x~~": 2 }),
+  )
+  let expected = "/metadata/~1a~1b~1~1~0x~0~0"
+  assert_eq(c.changes()[0].path, expected)
+  assert_eq(
+    @review.Comparison::from_bundle(c.to_bundle()).changes()[0].path,
+    expected,
+  )
+  assert_true(c.to_markdown().contains(expected))
+}
+
+///|
+test "literal escape-looking field names remain distinct from slashes" {
+  let c = compare(
+    notebook([], metadata={ "a/b/c": 1, "a/b~1c": 1 }),
+    notebook([], metadata={ "a/b/c": 2, "a/b~1c": 2 }),
+  )
+  let paths = c.changes().map(item => item.path)
+  assert_eq(paths.length(), 2)
+  assert_true(paths.contains("/metadata/a~1b~1c"))
+  assert_true(paths.contains("/metadata/a~1b~01c"))
+}

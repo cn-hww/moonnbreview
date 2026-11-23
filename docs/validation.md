@@ -56,3 +56,16 @@ literal Markdown/HTML, adaptive code fences, explicit preview counts, surrogate
 boundaries, control escaping, invalid limits, and atomic oversize refusal. The
 real-data CLI verifier compares Markdown bytes across backends, renders replayed
 bundles, preserves check exit 1, and rejects unsupported formats and Markdown bundles.
+
+## Repeated replacement regression
+
+Windows CI for the Markdown commit passed all 48 library tests on all four targets
+but exposed an end-to-end comparison bug: `String::replace` replaces only the first
+match. Native MSVC writes CRLF throughout multiline console output. The verifier
+now normalizes every console CRLF and asserts that JSON-escaped payload CR/LF stays
+unchanged. This is confined to the test harness, not notebook values.
+
+The same API mistake in JSON Pointer escaping is corrected for every `/` and `~`.
+Two additional public tests (50 total) cover repeated runs, escape-looking field
+names, replay and Markdown locations. This changes previously incorrect pointers
+for keys with repeated characters; existing normal-key outputs are unchanged.

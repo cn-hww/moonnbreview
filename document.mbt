@@ -13,7 +13,7 @@ pub struct Document {
 
 ///|
 fn pointer(path : String, key : String) -> String {
-  path + "/" + key.replace(old="~", new="~0").replace(old="/", new="~1")
+  path + "/" + key.replace_all(old="~", new="~0").replace_all(old="/", new="~1")
 }
 
 ///|
