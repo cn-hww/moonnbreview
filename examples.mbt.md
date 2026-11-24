@@ -31,6 +31,7 @@ test "public notebook review workflow" {
   )
   assert_eq(configured.to_json(), result.to_json())
   assert_true(configured.to_markdown().contains("Active changes: 1"))
+  assert_true(configured.to_html().contains("Complete JSON evidence"))
   assert_true(
     configured.to_markdown(focus_changes=true).contains("Preview range:"),
   )

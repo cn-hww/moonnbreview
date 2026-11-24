@@ -48,6 +48,10 @@ For a human-readable review, add `--format markdown` to `review`, `check` or
 explicit bounded value previews. It does not replace the full JSON evidence.
 See [Markdown reports](docs/markdown.md) for limits and a complete real-data workflow.
 
+Use `--format html` for a self-contained browser report with collapsible changes,
+complete before/after values and exact JSON evidence. Notebook content remains
+literal text. See [offline HTML review](docs/html.md).
+
 Compare committed notebooks directly with the optional Git adapter, without
 checkout or index changes:
 
@@ -89,6 +93,7 @@ The small public surface consists of `Document`, `Policy`, `Gate`, `compare`,
   long value previews state exactly how many UTF-16 units were omitted.
   Add `focus_changes=true` or CLI `--format markdown --focus-changes` to show
   the first differing region of paired strings with original offsets and lines.
+- `to_html` renders full evidence as an offline, script-free HTML document.
 
 Change paths are JSON Pointers **relative to the cell identified by `cell_id`**;
 when `cell_id` is null they are relative to the notebook. Added/removed/type-changed
@@ -162,6 +167,6 @@ This is a complementary review layer over existing notebook models, informed by
 nbdime's workflow. It is not a complete nbdime port, a notebook codec replacement
 or a claim of ecosystem uniqueness. See [research](docs/research.md).
 
-The next coherent capability is offline rich-output presentation.
+The next coherent capability is structured presentation of rich-output MIME data.
 Legacy files require a separate, explicit
 identity/ambiguity design. These capabilities are planned, not implemented.

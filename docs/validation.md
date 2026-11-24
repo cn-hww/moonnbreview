@@ -116,3 +116,16 @@ categories, Unicode, 8192/8193-unit boundaries and recovery. Totals: 64 core blo
 on four targets, plus five Git blocks on Wasm/native. The CLI verifier checks
 identical report bytes despite different gate verdicts, strict command/option
 handling, invalid files and file/Git entry equivalence against real data.
+
+## Offline HTML evidence (2026-11-24)
+
+Seven new core test blocks verify full JSON recovery, deterministic output/replay,
+hostile tags/entities/URLs, escaped dynamic locations and policy reasons, null versus
+absence, long unknown output fields, Unicode/controls, 16M output-budget refusal and
+recovery. Totals: 71 core blocks on all four targets, 76 including Git on Wasm/native.
+The end-to-end verifier checks real-data HTML, UTF-8 file round trips, exact recovered
+JSON, byte equality between targets/CLIs and replay, plus invalid format/focus flags.
+HTML has no scripts or rendered notebook markup and includes complete evidence.
+Browser visual preview was attempted but the browser URL security policy refused
+the local `file://` document. No screenshot/layout-interaction pass is claimed;
+the automated evidence, escaping and CLI checks are independent of that attempt.

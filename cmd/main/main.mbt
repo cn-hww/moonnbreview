@@ -17,8 +17,8 @@ fn arguments() -> Array[String] {
 
 ///|
 fn output_format(text : String) -> String raise {
-  guard text == "json" || text == "markdown" else {
-    fail("--format must be json or markdown")
+  guard ["json", "markdown", "html"].contains(text) else {
+    fail("--format must be json, markdown or html")
   }
   text
 }
@@ -29,7 +29,7 @@ fn main {
     let args = arguments()
     guard args.length() >= 2 else {
       fail(
-        "usage: review|check OLD NEW [--policy FILE] [--format json|markdown] | bundle OLD NEW [--policy FILE] | replay BUNDLE [--format json|markdown]",
+        "usage: review|check OLD NEW [--policy FILE] [--format json|markdown|html] | check ... --gate FILE | bundle OLD NEW [--policy FILE] | replay BUNDLE [--format json|markdown|html]",
       )
     }
     let command = args[1]
@@ -39,7 +39,7 @@ fn main {
     let comparison = if command == "replay" {
       guard args.length() >= 3 else {
         fail(
-          "usage: replay BUNDLE.json [--format json|markdown] [--focus-changes]",
+          "usage: replay BUNDLE.json [--format json|markdown|html] [--focus-changes]",
         )
       }
       let mut explicit_format = false
@@ -158,6 +158,8 @@ fn main {
       comparison.to_bundle()
     } else if format == "markdown" {
       comparison.to_markdown(focus_changes~)
+    } else if format == "html" {
+      comparison.to_html()
     } else {
       comparison.to_json()
     }

@@ -4,7 +4,7 @@ async fn main {
     let args = @env.args()
     guard args.length() >= 6 && ["review", "check", "bundle"].contains(args[1]) else {
       fail(
-        "usage: review|check|bundle REPO OLD_REF NEW_REF PATH [--policy FILE] [--format json|markdown]",
+        "usage: review|check|bundle REPO OLD_REF NEW_REF PATH [--policy FILE] [--format json|markdown|html]; check also accepts --gate FILE",
       )
     }
     let mut policy_path : String? = None
@@ -32,8 +32,9 @@ async fn main {
           policy_path = Some(args[i + 1])
         }
         "--format" => {
-          guard format is None && ["json", "markdown"].contains(args[i + 1]) else {
-            fail("--format requires json or markdown and may occur once")
+          guard format is None &&
+            ["json", "markdown", "html"].contains(args[i + 1]) else {
+            fail("--format requires json, markdown or html and may occur once")
           }
           format = Some(args[i + 1])
         }
@@ -62,6 +63,8 @@ async fn main {
       comparison.to_bundle()
     } else if format == Some("markdown") {
       comparison.to_markdown(focus_changes~)
+    } else if format == Some("html") {
+      comparison.to_html()
     } else {
       comparison.to_json()
     }

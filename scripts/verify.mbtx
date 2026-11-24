@@ -22,6 +22,14 @@ fn console_text(text : String) -> String {
   text.replace_all(old="\r\n", new="\n")
 }
 
+fn html_evidence(html : String) -> Json raise {
+  let parts = html.split("<div class=evidence>\n<pre><code>").collect()
+  guard parts.length() == 2 else { fail("missing unique HTML evidence") }
+  let encoded = parts[1].split("</code></pre>").collect()[0].to_owned()
+  let decoded = encoded.replace_all(old="&lt;", new="<").replace_all(old="&gt;", new=">").replace_all(old="&quot;", new="\"").replace_all(old="&#39;", new="'").replace_all(old="&amp;", new="&")
+  @json.parse(decoded)
+}
+
 fn late_edit(source : String, ending : String) -> String raise {
   guard @json.parse(source) is Object(root) && root["cells"] is Array(cells) && cells[0] is Object(first) && first["source"] is Array(lines) else { fail("unexpected Jupyter fixture shape") }
   let original = StringBuilder()
@@ -50,6 +58,7 @@ async fn main {
   let mut baseline : String? = None
   let mut markdown_baseline : String? = None
   let mut focused_baseline : String? = None
+  let mut html_baseline : String? = None
   for target in targets {
     println(command(["test", "--target", target, "--deny-warn"], 0))
     if target == "wasm" || target == "native" {
@@ -98,8 +107,19 @@ async fn main {
     ignore(command(json_focus, 2))
     let invalid_format = policy_args.copy()
     invalid_format.push("--format")
-    invalid_format.push("html")
+    invalid_format.push("pdf")
     ignore(command(invalid_format, 2))
+    let html_args = policy_args.copy()
+    for arg in ["--format", "html"] { html_args.push(arg) }
+    let html = console_text(command(html_args, 1))
+    assert_eq(html_evidence(html), report)
+    match html_baseline {
+      None => html_baseline = Some(html)
+      Some(value) => { assert_eq(html, value) }
+    }
+    let invalid_html_focus = html_args.copy()
+    invalid_html_focus.push("--focus-changes")
+    ignore(command(invalid_html_focus, 2))
     match baseline {
       None => baseline = Some(normalized_console)
       Some(value) => { guard value == normalized_console else { fail("backend report bytes differ") } }
@@ -113,6 +133,8 @@ async fn main {
     let dir = @fs.tmpdir(prefix="moonnbreview-")
     defer @fs.rmdir(dir, recursive=true)
     let path = dir + "/review.json"
+    @fs.write_file(dir + "/review.html", html)
+    assert_eq(console_text(@fs.read_file(dir + "/review.html").text()), html)
     let gate_path = dir + "/gate.json"
     @fs.write_file(gate_path, "{\"format\":\"moonnbreview/gate-1\",\"blocked\":[\"attachment\"]}")
     let gated = policy_args.copy()
@@ -147,6 +169,9 @@ async fn main {
     replay.push("replay")
     replay.push(path)
     assert_eq(@json.parse(command(replay, 0)[:]), report)
+    let html_replay = replay.copy()
+    for arg in ["--format", "html"] { html_replay.push(arg) }
+    assert_eq(console_text(command(html_replay, 0)), html)
     let invalid_gate_replay = replay.copy()
     for arg in ["--gate", "fixtures/gate.json"] { invalid_gate_replay.push(arg) }
     ignore(command(invalid_gate_replay, 2))
