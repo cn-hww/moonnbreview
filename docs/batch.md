@@ -48,6 +48,17 @@ storage. `BatchReview::to_json()` returns immutable complete evidence, and
 `exit_code()` returns 0/1/2. Arrays are copied at manifest boundaries. The compiled
 [public example](../examples.mbt.md) demonstrates this workflow.
 
+For separate baseline/proposed storage, call `manifest.review_sides(read_old,
+read_new, policy~, gate~, retain_inputs=true)`. Identical path strings can name
+different content in the two loaders, such as `baseline/lesson.ipynb` versus
+`candidate/lesson.ipynb`, object-store revisions or in-memory maps. Paths are passed
+literally to the appropriate loader; the library neither joins roots nor caches
+responses. Each pair reads and validates old before reading new. A failed old input
+does not invoke the new loader for that pair. Errors retain `read_old`, `parse_old`,
+`read_new` or `parse_new`, and later pairs continue. The original `review(loader)`
+uses the same loader on both sides and keeps its report/bundle bytes unchanged.
+This API adds no atomic snapshot guarantee; loaders own their consistency and IO.
+
 Each notebook retains existing format, numeric, Unicode and resource restrictions.
 Aggregate batch output is limited to 8,000,000 UTF-16 units; exhaustion refuses the
 whole result, never truncates values or drops pairs. Split the manifest when this

@@ -169,15 +169,31 @@ pub fn Manifest::review(
   gate~ : Gate = Gate::new(),
   retain_inputs~ : Bool = false,
 ) -> BatchReview raise ReviewError {
+  self.review_sides(read, read, policy~, gate~, retain_inputs~)
+}
+
+///|
+/// Compare two independent namespaces, allowing the same literal path to name
+/// different revisions. Each pair loads/parses old before loading/parsing new;
+/// errors retain their side and phase and later pairs still run. No caching or
+/// path rewriting is performed. Retention, budgets and gate semantics match review.
+pub fn Manifest::review_sides(
+  self : Manifest,
+  read_old : (String) -> String raise,
+  read_new : (String) -> String raise,
+  policy~ : Policy = Policy::{ counts: false, metadata_keys: [], },
+  gate~ : Gate = Gate::new(),
+  retain_inputs~ : Bool = false,
+) -> BatchReview raise ReviewError {
   let writer = batch_writer(policy, gate, retain_inputs)
   for pair in self.inputs {
     let mut phase = "read_old"
     let (status, detail, saved) = try {
-      let old_text = read(pair.old_path)
+      let old_text = read_old(pair.old_path)
       phase = "parse_old"
       let old = Document::parse(old_text)
       phase = "read_new"
-      let new_text = read(pair.new_path)
+      let new_text = read_new(pair.new_path)
       phase = "parse_new"
       let new = Document::parse(new_text)
       phase = "compare"

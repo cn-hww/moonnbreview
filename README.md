@@ -88,6 +88,10 @@ Core review types are `Document`, `Policy`, `Gate`, `Comparison`, `Change` and
 `ChangeKind`, with `compare` as the entry point. `ReviewPair`, `Manifest` and
 `BatchReview` provide the explicit multi-file workflow:
 
+`Manifest::review_sides` accepts independent baseline and proposed loaders, so the
+same path can refer to different revisions without temporary filename rewriting.
+See the [batch API workflow](docs/batch.md) and compiled public example.
+
 - `Document::parse` validates text; `to_string` retains accepted semantic data;
   `notebook` returns the immutable `moonrockz/notebooks/nbformat` model.
 - `Policy::new` explicitly enables count suppression or exact metadata-key

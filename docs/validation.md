@@ -179,3 +179,11 @@ blocks + 9 adapter blocks on all targets, plus 6 Git blocks on Wasm/native.
 The real-data CLI verifier checks XML/parser counts, file versus offline replay,
 error-bearing reports, exact cross-backend bytes and bad options. There is no
 claim of live CI-service upload or universal JUnit consumer compatibility.
+
+## Independent batch data sources (2026-11-24)
+
+Six new black-box blocks cover equal paths in separate namespaces, exact backwards
+report/bundle bytes, loader ordering and short circuiting, both read/parse sides,
+error recovery, suppression/gates and empty retained replay. The compiled public
+example uses two sources. Totals: 98 core + 9 JUnit blocks on portable targets,
+plus the existing 6 Git blocks on Wasm/native.

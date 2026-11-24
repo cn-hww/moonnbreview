@@ -84,6 +84,7 @@ pub fn Manifest::from_json(String) -> Self raise ReviewError
 pub fn Manifest::new(Array[ReviewPair]) -> Self raise ReviewError
 pub fn Manifest::pairs(Self) -> Array[ReviewPair]
 pub fn Manifest::review(Self, (String) -> String raise, policy? : Policy, gate? : Gate, retain_inputs? : Bool) -> BatchReview raise ReviewError
+pub fn Manifest::review_sides(Self, (String) -> String raise, (String) -> String raise, policy? : Policy, gate? : Gate, retain_inputs? : Bool) -> BatchReview raise ReviewError
 pub fn Manifest::to_json(Self) -> String
 
 #derive(Eq, @debug.Debug)
