@@ -19,10 +19,21 @@ fn arguments() -> Array[String] {
 fn main {
   try {
     let args = arguments()
-    guard args.length() >= 3 && ["review", "check"].contains(args[1]) else {
+    guard args.length() >= 3 &&
+      ["review", "check", "bundle", "replay"].contains(args[1]) else {
       fail(
-        "usage: review|check MANIFEST.json [--policy FILE] [--gate FILE (check only)]",
+        "usage: review|check|bundle MANIFEST.json [--policy FILE] [--gate FILE (check/bundle)] | replay BUNDLE.json",
       )
+    }
+    if args[1] == "replay" {
+      guard args.length() == 3 else {
+        fail(
+          "batch replay accepts only its bundle; no replacement policy or gate",
+        )
+      }
+      let replay = @review.BatchReview::from_bundle(read(args[2]))
+      println(replay.to_json())
+      @env.exit(replay.exit_code())
     }
     let mut policy_path : String? = None
     let mut gate_path : String? = None
@@ -35,8 +46,8 @@ fn main {
           policy_path = Some(args[i + 1])
         }
         "--gate" => {
-          guard args[1] == "check" && gate_path is None else {
-            fail("--gate may occur once, for check only")
+          guard ["check", "bundle"].contains(args[1]) && gate_path is None else {
+            fail("--gate may occur once, for check or bundle only")
           }
           gate_path = Some(args[i + 1])
         }
@@ -56,8 +67,15 @@ fn main {
       read,
       policy~,
       gate~,
+      retain_inputs=args[1] == "bundle",
     )
-    println(report.to_json())
+    println(
+      if args[1] == "bundle" {
+        report.to_bundle()
+      } else {
+        report.to_json()
+      },
+    )
     let code = report.exit_code()
     if code == 2 || (args[1] == "check" && code != 0) {
       @env.exit(code)

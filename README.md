@@ -72,6 +72,8 @@ omitting it preserves the default of blocking every active change.
 For several notebook pairs, use `moon run cmd/batch -- check fixtures/manifest.json`.
 The [batch workflow](docs/batch.md) retains complete per-file evidence, continues
 after individual errors, and reports a deterministic 0/1/2 CI result.
+`cmd/batch bundle` and `cmd/batch replay` provide [complete offline replay](docs/batch-replay.md)
+of those pairs, with explicit retention and persistent error evidence.
 
 ## Use the library
 

@@ -157,3 +157,13 @@ full evidence and grouped replay. The verifier derives two rich-output versions
 from the real fixture, checks text/JSON groups and complete recovered evidence,
 compares grouped HTML bytes across targets and CLIs, and rejects conflicting flags.
 No images, SVG or notebook HTML execute; browser visual QA remains unverified.
+
+## Complete batch replay (2026-11-24)
+
+Seven new core blocks cover retained/default report equivalence, deterministic
+bundle round trips, offline replay after storage removal, persistent archived errors,
+recomputed gates, cached-verdict rejection, embedded-policy matching, strict fields,
+duplicate IDs, 64/65-entry and output-size limits, empty batches and recovery.
+Totals: 92 core blocks, 98 with Git on Wasm/native. The real-data CLI verifier
+captures and replays batches, checks exit 1/2, refuses configuration replacement
+and replays archived errors after malformed source removal.

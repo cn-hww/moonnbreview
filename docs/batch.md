@@ -30,6 +30,8 @@ JSON rules apply to manifest text; duplicate/unknown/missing fields and wrong ty
 refuse the whole manifest before any notebook is loaded.
 
 `check` optionally accepts one `--gate FILE`; `--policy FILE` works for both commands.
+For complete offline reproducibility, the [batch replay workflow](batch-replay.md)
+adds `bundle` and `replay`, retaining inputs and the exact policy/gate configuration.
 Inline suppression flags and alternative output formats are not supported by this
 entry. Each successful pair keeps its **complete report-1 evidence**, and the batch
 also records exact versioned policy/gate configuration. Each failed pair records

@@ -41,6 +41,14 @@ test "public notebook review workflow" {
   ])
   let batch = manifest.review(path => if path == "base" { old } else { new })
   assert_eq(batch.exit_code(), 1)
+  let captured = manifest.review(
+    path => if path == "base" { old } else { new },
+    retain_inputs=true,
+  )
+  assert_eq(
+    @review.BatchReview::from_bundle(captured.to_bundle()).to_json(),
+    batch.to_json(),
+  )
   assert_eq(
     @review.Manifest::from_json(manifest.to_json()).to_json(),
     manifest.to_json(),

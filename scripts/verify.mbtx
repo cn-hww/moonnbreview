@@ -175,6 +175,17 @@ async fn main {
     let batch_review = batch_args.copy()
     batch_review[5] = "review"
     assert_eq(console_text(command(batch_review, 0)), batch_text)
+    let batch_capture = batch_args.copy()
+    batch_capture[5] = "bundle"
+    let batch_bundle = command(batch_capture, 0)
+    let batch_bundle_path = dir + "/batch-bundle.json"
+    @fs.write_file(batch_bundle_path, batch_bundle)
+    let batch_replay = batch_prefix.copy()
+    for arg in ["replay", batch_bundle_path] { batch_replay.push(arg) }
+    assert_eq(console_text(command(batch_replay, 1)), batch_text)
+    let overridden_replay = batch_replay.copy()
+    for arg in ["--gate", "fixtures/gate.json"] { overridden_replay.push(arg) }
+    ignore(command(overridden_replay, 2))
     let bad_notebook = dir + "/bad.ipynb"
     let bad_manifest = dir + "/bad-manifest.json"
     @fs.write_file(bad_notebook, "{invalid")
@@ -189,7 +200,13 @@ async fn main {
     assert_eq(error_items.length(), 3)
     assert_eq(errors["summary"], ({"total":3,"passed":1,"blocked":0,"failed":2}:Json))
     batch_errors[5] = "review"
-    ignore(command(batch_errors, 2))
+    let error_report = console_text(command(batch_errors, 2))
+    batch_errors[5] = "bundle"
+    @fs.write_file(batch_bundle_path, command(batch_errors, 2))
+    @fs.remove(bad_notebook)
+    assert_eq(console_text(command(batch_replay, 2)), error_report)
+    @fs.write_file(batch_bundle_path, "{}")
+    ignore(command(batch_replay, 2))
     @fs.write_file(bad_manifest, "{}")
     ignore(command(batch_errors, 2))
     @fs.write_file(dir + "/review.html", html)
