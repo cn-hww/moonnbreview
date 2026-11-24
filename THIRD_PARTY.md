@@ -41,3 +41,10 @@ and [XML 1.0 character rules](https://www.w3.org/TR/xml/#charsets). No documenta
 implementation, schema or external test fixture from these references was copied.
 The generic JUnit/XML code remains in the licensed dependency packages; this
 repository adds only Notebook outcome/evidence mapping and its own integration tests.
+
+Release verification invokes Python 3's existing
+[standard-library ZIP CLI](https://docs.python.org/3/library/zipfile.html#command-line-interface)
+as an external development tool for CRC testing and extraction. Python is under
+the [PSF License Version 2](https://docs.python.org/3/license.html), with incorporated
+component licenses documented by its distributors. No Python source, documentation
+examples or tests were copied or bundled; all orchestration here remains `.mbtx`.

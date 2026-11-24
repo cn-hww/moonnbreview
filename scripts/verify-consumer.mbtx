@@ -19,9 +19,31 @@ async fn command(cwd : String, program : String, args : Array[String], expected~
 
 async fn main {
   let args = @env.args()
-  guard args.length() == 1 || args == [args[0], "--portable"] || args == [args[0], "--native"] else { fail("usage: verify-consumer.mbtx [--portable|--native]") }
-  let targets = if args.length() == 1 { ["wasm", "wasm-gc", "js", "native"] } else if args[1] == "--portable" { ["wasm", "wasm-gc", "js"] } else { ["native"] }
+  let mut mode : String? = None
+  let mut git_repo : String? = None
+  let mut i = 1
+  while i < args.length() {
+    match args[i] {
+      "--portable" | "--native" => {
+        guard mode is None else { fail("choose at most one consumer target mode") }
+        mode = Some(args[i])
+      }
+      "--git-repo" => {
+        guard git_repo is None && i + 1 < args.length() else { fail("--git-repo requires one path and may occur once") }
+        i += 1
+        git_repo = Some(args[i])
+      }
+      _ => fail("usage: verify-consumer.mbtx [--portable|--native] [--git-repo PATH]")
+    }
+    i += 1
+  }
+  let targets = match mode {
+    Some("--portable") => ["wasm", "wasm-gc", "js"]
+    Some(_) => ["native"]
+    None => ["wasm", "wasm-gc", "js", "native"]
+  }
   let repo = @fs.realpath(".").replace_all(old="\\", new="/")
+  let git_source = @fs.realpath(git_repo.unwrap_or(repo)).replace_all(old="\\", new="/")
   let dir = @fs.tmpdir(prefix="nbreview-consumer-")
   defer @fs.rmdir(dir, recursive=true)
   let consumer = dir + "/consumer"
@@ -92,11 +114,11 @@ async fn main {
     )
   )
   ignore(command(dir, "moon", ["work", "init", repo, consumer]))
-  let head = command(repo, "git", ["rev-parse", "HEAD"]).trim().to_owned()
+  let head = command(git_source, "git", ["rev-parse", "HEAD"]).trim().to_owned()
   for target in targets {
     println(command(consumer, "moon", ["test", ".", "--target", target, "--deny-warn"]))
     if target == "wasm" || target == "native" {
-      assert_true(command(consumer, "moon", ["run", "git-demo", "--target", target, "--deny-warn", "--", repo, head]).contains("External Git consumer passed"))
+      assert_true(command(consumer, "moon", ["run", "git-demo", "--target", target, "--deny-warn", "--", git_source, head]).contains("External Git consumer passed"))
     }
   }
   if targets.contains("native") {

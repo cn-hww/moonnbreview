@@ -68,3 +68,8 @@ batch gates, Markdown and JUnit. Git API consumers run on Wasm/native. Native mo
 also installs all four commands into a fresh temporary directory and runs help,
 version, passing checks and blocked real-data checks from outside the repository.
 Full `scripts/verify.mbtx` includes this verification; CI repeats it on all three OSes.
+
+For an extracted source distribution without `.git`, the verifier accepts
+`--git-repo PATH` to select an existing fixture repository for Git-only checks;
+all library/installation inputs still come from the extracted module itself.
+The [release preflight](release.md) performs this independent archive check.

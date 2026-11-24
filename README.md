@@ -7,8 +7,10 @@ formatting, execution counters and rich-output payloads. It aligns cells by ID,
 separates source, output, attachment, metadata and extension changes, and records
 every policy-suppressed change with its reason. Inputs are never rewritten.
 
-This is the first source release; the package has **not been published to
-Mooncakes**. The implemented scope below is the contract of this release.
+The **initial usable source milestone (0.1.0)** is complete for the documented
+review workflow. The package has **not been published to Mooncakes**.
+See [release scope and reproducible preflight](docs/release.md),
+[change history](CHANGELOG.md) and [contribution guide](CONTRIBUTING.md).
 
 ## Try the complete workflow
 
@@ -182,6 +184,9 @@ updates, strict all-target checking, public API tests, real-data CLI checks,
 C compiler must be on PATH. CI repeats it on Linux, macOS and Windows. It also
 checks reproducible fixtures and rejects formatting/interface drift.
 Recorded local environments and limits are in [docs/validation.md](docs/validation.md).
+`scripts/verify-release.mbtx` additionally audits the actual source ZIP, executes
+consumers from its extracted contents and generates API documentation; it needs Python 3's
+standard ZIP CLI, with no pip dependencies. CI runs both complete checks.
 `scripts/verify.mbtx --portable` explicitly limits local execution to Wasm,
 Wasm-GC and JS when a native compiler is unavailable; it does not validate native
 execution.

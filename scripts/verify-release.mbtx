@@ -1,0 +1,105 @@
+----
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn command(cwd : String, program : String, args : Array[String], include_stderr~ : Bool = false) -> String {
+  let result = @shell.Cmd(program, args, cwd~).output(timeout_ms=300000, max_output_bytes=16000000)
+  guard result.exit_code() == 0 else {
+    println(result.stdout()); println(result.stderr()); fail("release verification command failed: " + program + " " + args.join(" "))
+  }
+  let diagnostic = if include_stderr { result.stderr() } else { "" }
+  (result.stdout() + diagnostic).replace_all(old="\r\n", new="\n")
+}
+
+// Read the two quoted fields emitted by this pinned toolchain's moon fmt.
+// This is a project preflight, not a general Moon manifest parser.
+fn field(manifest : String, key : String) -> String raise {
+  let prefix = key + " = "
+  let values = manifest.split("\n").filter_map(line => {
+    let line = line.trim().to_owned()
+    if line.has_prefix(prefix) { Some(line[prefix.length():].to_owned()) } else { None }
+  }).collect()
+  guard values.length() == 1 && @json.parse(values[0]) is String(value) else {
+    fail("expected one quoted " + key + " field in formatted moon.mod")
+  }
+  value
+}
+
+async fn files(root : String, relative : String, out : Array[String]) -> Unit {
+  let path = if relative.is_empty() { root } else { root + "/" + relative }
+  for name in @fs.readdir(path) {
+    let child = if relative.is_empty() { name } else { relative + "/" + name }
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Directory => files(root, child, out)
+      Regular => out.push(child)
+      _ => fail("unexpected nonregular package entry: " + child)
+    }
+  }
+}
+
+async fn python(cwd : String, args : Array[String]) -> Unit {
+  let windows = @env.get_env_var("OS") == Some("Windows_NT")
+  let argv = if windows { ["-3", "-m", "zipfile"] } else { ["-m", "zipfile"] }
+  for arg in args { argv.push(arg) }
+  ignore(command(cwd, if windows { "py" } else { "python3" }, argv))
+}
+
+async fn main {
+  let args = @env.args()
+  guard args.length() == 1 || args == [args[0], "--portable"] || args == [args[0], "--native"] else { fail("usage: verify-release.mbtx [--portable|--native]") }
+  let repo = @fs.realpath(".").replace_all(old="\\", new="/")
+  println("Checking module metadata, command versions and source packaging...")
+  let manifest = @fs.read_file("moon.mod").text()
+  let name = field(manifest, "name")
+  let version = field(manifest, "version")
+  assert_eq(field(manifest, "license"), "MIT")
+  let required = ["moon.mod", "moon.pkg", "LICENSE", "README.md", "THIRD_PARTY.md", "CHANGELOG.md", "CONTRIBUTING.md", "pkg.generated.mbti", "git/pkg.generated.mbti", "junit/pkg.generated.mbti", "fixtures/upstream/LICENSE", "fixtures/upstream/test4.ipynb", "docs/install.md", "docs/ci.md", "docs/release.md", "scripts/verify-consumer.mbtx"]
+  for path in required { guard @fs.exists(path) else { fail("missing source distribution file: " + path) } }
+  for (entry, label) in [("main", "moonnbreview"), ("batch", "moonnbreview-batch"), ("git-review", "moonnbreview-git"), ("git-batch", "moonnbreview-git-batch")] {
+    assert_eq(command(repo, "moon", ["run", "--deny-warn", "--target", "wasm", "cmd/" + entry, "--", "--version"]), label + " " + version + "\n")
+  }
+  let listing = command(repo, "moon", ["package", "--list"], include_stderr=true)
+  let expected : Array[String] = []
+  for raw in listing.split("\n") {
+    let path = raw.trim().to_owned().replace_all(old="\\", new="/")
+    if path.is_empty() || path.has_prefix("Running moon check") || path.has_prefix("Finished. moon:") || path == "Check passed" || path.has_prefix("Package to ") { continue }
+    guard !path.has_prefix("/") && !path.contains(":") &&
+      path.split("/").all(part => part != ".." && part != "." && part != "") else { fail("unexpected package listing path: " + path) }
+    guard @fs.kind(repo + "/" + path, follow_symlink=false) == @fs.Regular else { fail("listing is not a regular source file: " + path) }
+    expected.push(path)
+  }
+  for path in required { guard expected.contains(path) else { fail("required file missing from package listing: " + path) } }
+  let archive = repo + "/_build/publish/" + name.replace_all(old="/", new="-") + "-" + version + ".zip"
+  guard @fs.exists(archive) else { fail("Moon package archive was not created") }
+  let dir = @fs.tmpdir(prefix="nbreview-release-")
+  defer @fs.rmdir(dir, recursive=true)
+  python(repo, ["-t", archive])
+  python(repo, ["-e", archive, dir])
+  let actual : Array[String] = []
+  files(dir, "", actual)
+  actual.sort(); expected.sort()
+  assert_eq(actual, expected)
+  for path in expected {
+    assert_eq(@fs.read_file(repo + "/" + path).binary(), @fs.read_file(dir + "/" + path).binary())
+  }
+  guard !( @fs.exists(dir + "/.git") ) && !( @fs.exists(dir + "/_build") ) && !( @fs.exists(dir + "/.mooncakes") ) else { fail("development state leaked into distribution") }
+  println("Archive file/byte verification passed; executing extracted-module consumers...")
+  let consumer_args = ["run", "--deny-warn", "scripts/verify-consumer.mbtx", "--git-repo", repo]
+  if args.length() == 2 { consumer_args.push(args[1]) }
+  println(command(dir, "moon", consumer_args))
+  println("Generating and checking API documentation...")
+  ignore(command(dir, "moon", ["doc"]))
+  for path in ["members.md", "package_data.json", "model.mbt.html", "git/members.md", "junit/members.md"] {
+    guard @fs.exists(dir + "/_build/doc/" + name + "/" + path) else { fail("API documentation was not generated: " + path) }
+  }
+  guard @json.parse(@fs.read_file(dir + "/_build/doc/" + name + "/package_data.json").text()) is Object(api) &&
+    api.get("name") == Some(Json(name)) && api.get("types") is Some(Array(types)) else { fail("invalid generated API metadata") }
+  assert_true(types.iter().any(value => match value { Object(fields) => fields.get("name") == Some(Json("BatchReview")); _ => false }))
+  println("Validated " + expected.length().to_string() + " exact archive files, external consumers and generated API docs for " + name + "@" + version + "; no registry publication performed.")
+}

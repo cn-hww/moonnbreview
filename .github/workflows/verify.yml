@@ -18,10 +18,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
       - run: moon version --all
       - run: moon update
       - run: moon run --deny-warn scripts/verify.mbtx
       - run: moon run --deny-warn scripts/prepare-fixture.mbtx
+      - run: moon run --deny-warn scripts/verify-release.mbtx
       - run: git diff --exit-code

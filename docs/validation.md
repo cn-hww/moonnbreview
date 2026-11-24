@@ -233,3 +233,15 @@ executes each help/version and real-data 0/1 checks from an unrelated working
 directory. No global installation paths or user workspace files are changed.
 All four source entries now provide help/version, with portable end-to-end checks
 for correct exit/flag handling. Full verification includes the isolated consumer.
+
+## Source-distribution preflight (2026-11-24)
+
+`verify-release.mbtx` checks module/license/CLI-version agreement, creates the actual
+Moon source ZIP, validates ZIP CRCs using Python's standard CLI and compares every
+listed file and byte after extraction. It requires own/upstream licenses, public
+interfaces, source, fixtures and adoption docs, and excludes development state.
+The extracted module executes isolated downstream/installation checks and builds
+API member Markdown, metadata and annotated source HTML. This does not publish to
+Mooncakes, prove registry acceptance or
+claim timestamp-reproducible ZIP bytes. Registry dry-run requires owner login and
+was not completed. No registry credential changes or actual publication occurred.
