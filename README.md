@@ -69,14 +69,19 @@ To choose which active changes block CI, use `check ... --gate fixtures/gate.jso
 The [gate file](docs/gates.md) selects categories without removing evidence;
 omitting it preserves the default of blocking every active change.
 
+For several notebook pairs, use `moon run cmd/batch -- check fixtures/manifest.json`.
+The [batch workflow](docs/batch.md) retains complete per-file evidence, continues
+after individual errors, and reports a deterministic 0/1/2 CI result.
+
 ## Use the library
 
 Import `"cn-hww/moonnbreview" @review` in `moon.pkg`. For checkout development use
 a `moon.work` listing this module and the consuming module. See the compiled
 [public API example](examples.mbt.md) and [generated interface](pkg.generated.mbti).
 
-The small public surface consists of `Document`, `Policy`, `Gate`, `compare`,
-`Comparison`, `Change` and `ChangeKind`:
+Core review types are `Document`, `Policy`, `Gate`, `Comparison`, `Change` and
+`ChangeKind`, with `compare` as the entry point. `ReviewPair`, `Manifest` and
+`BatchReview` provide the explicit multi-file workflow:
 
 - `Document::parse` validates text; `to_string` retains accepted semantic data;
   `notebook` returns the immutable `moonrockz/notebooks/nbformat` model.

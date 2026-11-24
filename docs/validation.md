@@ -137,3 +137,13 @@ unchanged) verifies explicit old/new paths, Unicode/shell-character filenames,
 retained cell identities, source edits, pure-rename equivalence, missing old paths
 and bundle replay. The real-data Git verifier additionally checks new-path option
 errors and dirty renamed worktree/index/HEAD preservation through the CLI.
+
+## Bounded manifest review (2026-11-24)
+
+Eight new core blocks cover strict manifest round trips/order, immutable arrays,
+complete single-pair evidence, gate/suppression independence, failure precedence
+and recovery, empty batches, malformed/unknown/duplicate fields, ID/path/64-pair
+limits, Unicode and aggregate output refusal. Totals: 79 core blocks, 85 including
+the six Git blocks on Wasm/native. CLI checks use the real two-pair fixture and
+temporary missing/malformed files to verify continuation, all exit classes, exact
+configuration/evidence and deterministic report bytes across all four targets.

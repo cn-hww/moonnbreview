@@ -1,0 +1,7 @@
+{
+  "format": "moonnbreview/manifest-1",
+  "pairs": [
+    {"id": "editorial-rerun", "old": "fixtures/before.ipynb", "new": "fixtures/after.ipynb"},
+    {"id": "unchanged-control", "old": "fixtures/before.ipynb", "new": "fixtures/before.ipynb"}
+  ]
+}

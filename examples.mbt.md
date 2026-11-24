@@ -32,6 +32,15 @@ test "public notebook review workflow" {
   assert_eq(configured.to_json(), result.to_json())
   assert_true(configured.to_markdown().contains("Active changes: 1"))
   assert_true(configured.to_html().contains("Complete JSON evidence"))
+  let manifest = @review.Manifest::new([
+    { id: "analysis", old_path: "base", new_path: "proposed", },
+  ])
+  let batch = manifest.review(path => if path == "base" { old } else { new })
+  assert_eq(batch.exit_code(), 1)
+  assert_eq(
+    @review.Manifest::from_json(manifest.to_json()).to_json(),
+    manifest.to_json(),
+  )
   assert_true(
     configured.to_markdown(focus_changes=true).contains("Preview range:"),
   )

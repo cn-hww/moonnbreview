@@ -59,6 +59,7 @@ async fn main {
   let mut markdown_baseline : String? = None
   let mut focused_baseline : String? = None
   let mut html_baseline : String? = None
+  let mut batch_baseline : String? = None
   for target in targets {
     println(command(["test", "--target", target, "--deny-warn"], 0))
     if target == "wasm" || target == "native" {
@@ -133,10 +134,50 @@ async fn main {
     let dir = @fs.tmpdir(prefix="moonnbreview-")
     defer @fs.rmdir(dir, recursive=true)
     let path = dir + "/review.json"
+    let batch_prefix = ["run", "--target", target, "cmd/batch", "--"]
+    let batch_args = batch_prefix.copy()
+    for arg in ["check", "fixtures/manifest.json", "--policy", "fixtures/policy.json"] { batch_args.push(arg) }
+    let batch_text = console_text(command(batch_args, 1))
+    guard @json.parse(batch_text) is Object(batch) && batch["results"] is Array(batch_items) && batch_items[0] is Object(first_batch) else { fail("invalid batch evidence") }
+    assert_eq(first_batch["report"], report)
+    assert_eq(batch["summary"], ({"total":2,"passed":1,"blocked":1,"failed":0}:Json))
+    match batch_baseline {
+      None => batch_baseline = Some(batch_text)
+      Some(value) => { assert_eq(batch_text, value) }
+    }
+    let batch_review = batch_args.copy()
+    batch_review[5] = "review"
+    assert_eq(console_text(command(batch_review, 0)), batch_text)
+    let bad_notebook = dir + "/bad.ipynb"
+    let bad_manifest = dir + "/bad-manifest.json"
+    @fs.write_file(bad_notebook, "{invalid")
+    @fs.write_file(bad_manifest, ({"format":"moonnbreview/manifest-1", "pairs":[
+      {"id":"missing","old":Json(dir + "/missing.ipynb"),"new":"fixtures/after.ipynb"},
+      {"id":"malformed","old":Json(bad_notebook),"new":"fixtures/after.ipynb"},
+      {"id":"healthy","old":"fixtures/before.ipynb","new":"fixtures/before.ipynb"}
+    ]}:Json).stringify())
+    let batch_errors = batch_prefix.copy()
+    for arg in ["check", bad_manifest] { batch_errors.push(arg) }
+    guard @json.parse(command(batch_errors, 2)) is Object(errors) && errors["results"] is Array(error_items) else { fail("batch failed to retain diagnostics") }
+    assert_eq(error_items.length(), 3)
+    assert_eq(errors["summary"], ({"total":3,"passed":1,"blocked":0,"failed":2}:Json))
+    batch_errors[5] = "review"
+    ignore(command(batch_errors, 2))
+    @fs.write_file(bad_manifest, "{}")
+    ignore(command(batch_errors, 2))
     @fs.write_file(dir + "/review.html", html)
     assert_eq(console_text(@fs.read_file(dir + "/review.html").text()), html)
     let gate_path = dir + "/gate.json"
     @fs.write_file(gate_path, "{\"format\":\"moonnbreview/gate-1\",\"blocked\":[\"attachment\"]}")
+    let batch_gate = batch_args.copy()
+    for arg in ["--gate", gate_path] { batch_gate.push(arg) }
+    guard @json.parse(command(batch_gate, 0)) is Object(allowed_batch) else { fail("invalid gated batch") }
+    assert_eq(allowed_batch["summary"], ({"total":2,"passed":2,"blocked":0,"failed":0}:Json))
+    let duplicate_batch_gate = batch_gate.copy()
+    for arg in ["--gate", gate_path] { duplicate_batch_gate.push(arg) }
+    ignore(command(duplicate_batch_gate, 2))
+    batch_gate[5] = "review"
+    ignore(command(batch_gate, 2))
     let gated = policy_args.copy()
     for arg in ["--gate", gate_path] { gated.push(arg) }
     assert_eq(console_text(command(gated, 0)), normalized_console)
