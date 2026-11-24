@@ -10,6 +10,8 @@ Runtime dependencies:
 | [moonrockz/notebooks 0.11.0](https://github.com/moonrockz/moon-lander/tree/main/pkgs/notebooks) | Apache-2.0 | Notebook model, codec and immutable accessors |
 | [moonbitlang/core](https://github.com/moonbitlang/core) | Apache-2.0 | Standard library, JSON, UTF-8, environment |
 | [moonbitlang/x 0.5.5](https://github.com/moonbitlang/x) | Apache-2.0 | CLI filesystem adapter |
+| [tc-adventureking/junit_delta 0.4.0](https://github.com/tc-adventureking/moon-junit-delta) | MIT AND Apache-2.0 | Optional Notebook-batch to JUnit projection; reuses generic construction, statistics and XML serialization |
+| [Milky2018/xml 0.6.1](https://github.com/moonbit-community/xml-mbt) | Apache-2.0 | Transitive JUnit XML codec and parser |
 
 The notebook module transitively uses moonrockz/ion 0.6.0, moonrockz/expect 0.6.1,
 moonbit-community/toml 0.5.0 (Apache-2.0), bobzhang/lexer 0.3.0 (Apache-2.0),
@@ -31,3 +33,9 @@ Design references: [nbdime](https://github.com/jupyter/nbdime) (BSD-3-Clause),
 and [RFC 6901](https://www.rfc-editor.org/rfc/rfc6901) JSON Pointer escaping.
 These inform behavior and naming; no implementation or fixture was taken from
 nbdime. GitHub Actions used by CI retain their own upstream licenses.
+
+JUnit projection design references: [GitLab unit test reports](https://docs.gitlab.com/ci/testing/unit_test_reports/)
+and [XML 1.0 character rules](https://www.w3.org/TR/xml/#charsets). No documentation,
+implementation, schema or external test fixture from these references was copied.
+The generic JUnit/XML code remains in the licensed dependency packages; this
+repository adds only Notebook outcome/evidence mapping and its own integration tests.

@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "cn-hww/moonnbreview/junit"
+
+import {
+  "cn-hww/moonnbreview",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn render(@moonnbreview.BatchReview) -> String raise ExportError
+
+// Errors
+#derive(Eq, @debug.Debug)
+pub(all) suberror ExportError {
+  Invalid(String)
+}
+
+// Types and methods
+
+// Type aliases
+
+// Traits

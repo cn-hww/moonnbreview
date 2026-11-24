@@ -5,6 +5,7 @@ import {
   "moonbitlang/async@0.22.4/fs",
   "moonbitlang/core/json",
   "moonbitlang/core/env",
+  "tc-adventureking/junit_delta@0.4.0" @junitcodec,
 }
 ----
 
@@ -20,6 +21,17 @@ async fn command(args : Array[String], expected : Int32) -> String {
 
 fn console_text(text : String) -> String {
   text.replace_all(old="\r\n", new="\n")
+}
+
+fn check_junit(text : String, tests : Int32, failures : Int32, errors : Int32) -> Unit raise {
+  let document = @junitcodec.JUnitDocument::from_xml(text)
+  assert_eq(document.root.attribute("tests"), Some(tests.to_string()))
+  assert_eq(document.root.attribute("failures"), Some(failures.to_string()))
+  assert_eq(document.root.attribute("errors"), Some(errors.to_string()))
+  let cases = @junitcodec.parse_report(text).cases
+  assert_eq(cases.length(), tests)
+  assert_eq(cases.iter().filter(c => c.is_failure()).count(), failures)
+  assert_eq(cases.iter().filter(c => c.is_error()).count(), errors)
 }
 
 fn html_evidence(html : String) -> Json raise {
@@ -77,6 +89,7 @@ async fn main {
   let mut html_baseline : String? = None
   let mut batch_baseline : String? = None
   let mut mime_baseline : String? = None
+  let mut junit_baseline : String? = None
   for target in targets {
     println(command(["test", "--target", target, "--deny-warn"], 0))
     if target == "wasm" || target == "native" {
@@ -175,6 +188,26 @@ async fn main {
     let batch_review = batch_args.copy()
     batch_review[5] = "review"
     assert_eq(console_text(command(batch_review, 0)), batch_text)
+    let batch_xml_args = batch_args.copy()
+    for arg in ["--format", "junit"] { batch_xml_args.push(arg) }
+    let batch_xml = console_text(command(batch_xml_args, 1))
+    check_junit(batch_xml, 2, 1, 0)
+    let junit_path = dir + "/notebook-review.xml"
+    @fs.write_file(junit_path, batch_xml)
+    check_junit(@fs.read_file(junit_path).text(), 2, 1, 0)
+    match junit_baseline {
+      None => junit_baseline = Some(batch_xml)
+      Some(value) => { assert_eq(batch_xml, value) }
+    }
+    let batch_xml_review = batch_xml_args.copy()
+    batch_xml_review[5] = "review"
+    assert_eq(console_text(command(batch_xml_review, 0)), batch_xml)
+    let invalid_xml_format = batch_xml_args.copy()
+    for arg in ["--format", "junit"] { invalid_xml_format.push(arg) }
+    ignore(command(invalid_xml_format, 2))
+    let unsupported_batch_format = batch_args.copy()
+    for arg in ["--format", "html"] { unsupported_batch_format.push(arg) }
+    ignore(command(unsupported_batch_format, 2))
     let batch_capture = batch_args.copy()
     batch_capture[5] = "bundle"
     let batch_bundle = command(batch_capture, 0)
@@ -183,6 +216,12 @@ async fn main {
     let batch_replay = batch_prefix.copy()
     for arg in ["replay", batch_bundle_path] { batch_replay.push(arg) }
     assert_eq(console_text(command(batch_replay, 1)), batch_text)
+    let batch_xml_replay = batch_replay.copy()
+    for arg in ["--format", "junit"] { batch_xml_replay.push(arg) }
+    assert_eq(console_text(command(batch_xml_replay, 1)), batch_xml)
+    let invalid_bundle_format = batch_capture.copy()
+    for arg in ["--format", "junit"] { invalid_bundle_format.push(arg) }
+    ignore(command(invalid_bundle_format, 2))
     let overridden_replay = batch_replay.copy()
     for arg in ["--gate", "fixtures/gate.json"] { overridden_replay.push(arg) }
     ignore(command(overridden_replay, 2))
@@ -205,6 +244,7 @@ async fn main {
     @fs.write_file(batch_bundle_path, command(batch_errors, 2))
     @fs.remove(bad_notebook)
     assert_eq(console_text(command(batch_replay, 2)), error_report)
+    check_junit(console_text(command(batch_xml_replay, 2)), 3, 0, 2)
     @fs.write_file(batch_bundle_path, "{}")
     ignore(command(batch_replay, 2))
     @fs.write_file(bad_manifest, "{}")

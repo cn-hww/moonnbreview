@@ -74,6 +74,9 @@ The [batch workflow](docs/batch.md) retains complete per-file evidence, continue
 after individual errors, and reports a deterministic 0/1/2 CI result.
 `cmd/batch bundle` and `cmd/batch replay` provide [complete offline replay](docs/batch-replay.md)
 of those pairs, with explicit retention and persistent error evidence.
+Add `--format junit` to batch review/check/replay for
+[per-Notebook CI test results](docs/junit.md), preserving complete evidence and
+the original gate/error exit semantics.
 
 ## Use the library
 

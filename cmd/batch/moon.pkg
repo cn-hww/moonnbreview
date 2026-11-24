@@ -1,5 +1,6 @@
 import {
   "cn-hww/moonnbreview" @review,
+  "cn-hww/moonnbreview/junit",
   "moonbitlang/x/fs",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",

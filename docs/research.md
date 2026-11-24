@@ -30,3 +30,10 @@ These are download events, including automated and transitive installs, not user
 counts or evidence of MoonBit adoption. nbdime demonstrates an established
 notebook-specific review problem; this project makes no originality or performance
 claim and does not attempt full nbdime compatibility.
+
+The 2026-11-24 CI export review found an existing generic
+[junit_delta](https://mooncakes.io/docs/tc-adventureking/junit_delta) creation,
+editing, merging and comparison API. The optional `moonnbreview/junit` adapter
+reuses that library and its XML dependency. Its boundary is only a validated
+Notebook `BatchReview` to testcase outcomes/configuration/evidence; no generic
+JUnit model, parser, writer, editor or diff API is reimplemented or re-exported.

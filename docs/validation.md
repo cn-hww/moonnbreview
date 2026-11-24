@@ -167,3 +167,15 @@ duplicate IDs, 64/65-entry and output-size limits, empty batches and recovery.
 Totals: 92 core blocks, 98 with Git on Wasm/native. The real-data CLI verifier
 captures and replays batches, checks exit 1/2, refuses configuration replacement
 and replays archived errors after malformed source removal.
+
+## JUnit CI projection (2026-11-24)
+
+The optional adapter adds eight black-box tests and one compiled documentation
+example. They parse exported XML through the reused JUnit codec, verify all case
+outcomes/statistics, full per-case/configuration evidence, escaping, replay
+determinism, unchanged JSON/bundle/verdict, selective gates, empty suites, illegal
+XML-character refusal, output expansion limits and recovery. Totals: 92 root-core
+blocks + 9 adapter blocks on all targets, plus 6 Git blocks on Wasm/native.
+The real-data CLI verifier checks XML/parser counts, file versus offline replay,
+error-bearing reports, exact cross-backend bytes and bad options. There is no
+claim of live CI-service upload or universal JUnit consumer compatibility.

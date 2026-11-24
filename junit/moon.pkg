@@ -1,0 +1,12 @@
+import {
+  "cn-hww/moonnbreview" @review,
+  "tc-adventureking/junit_delta" @codec,
+  "moonbitlang/core/json",
+}
+
+import {
+  "cn-hww/moonnbreview/junit",
+  "cn-hww/moonnbreview" @review,
+  "tc-adventureking/junit_delta" @codec,
+  "moonbitlang/core/json",
+} for "test"
