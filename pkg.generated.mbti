@@ -57,6 +57,14 @@ pub fn Document::notebook(Self) -> @nbformat.Notebook
 pub fn Document::parse(String) -> Self raise ReviewError
 pub fn Document::to_string(Self) -> String raise ReviewError
 
+pub struct Gate {
+  // private fields
+}
+pub fn Gate::blocked(Self) -> Array[ChangeKind]
+pub fn Gate::from_json(String) -> Self raise ReviewError
+pub fn Gate::new(blocked? : Array[ChangeKind]) -> Self raise ReviewError
+pub fn Gate::to_json(Self) -> String
+
 pub struct Policy {
   // private fields
 }

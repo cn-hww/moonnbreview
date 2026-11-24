@@ -113,6 +113,22 @@ async fn main {
     let dir = @fs.tmpdir(prefix="moonnbreview-")
     defer @fs.rmdir(dir, recursive=true)
     let path = dir + "/review.json"
+    let gate_path = dir + "/gate.json"
+    @fs.write_file(gate_path, "{\"format\":\"moonnbreview/gate-1\",\"blocked\":[\"attachment\"]}")
+    let gated = policy_args.copy()
+    for arg in ["--gate", gate_path] { gated.push(arg) }
+    assert_eq(console_text(command(gated, 0)), normalized_console)
+    let source_gate = policy_args.copy()
+    for arg in ["--gate", "fixtures/gate.json"] { source_gate.push(arg) }
+    assert_eq(console_text(command(source_gate, 1)), normalized_console)
+    let duplicate_gate = source_gate.copy()
+    for arg in ["--gate", gate_path] { duplicate_gate.push(arg) }
+    ignore(command(duplicate_gate, 2))
+    @fs.write_file(gate_path, "{invalid")
+    ignore(command(gated, 2))
+    let review_gate = source_gate.copy()
+    review_gate[5] = "review"
+    ignore(command(review_gate, 2))
     let late_before = dir + "/late-before.ipynb"
     let late_after = dir + "/late-after.ipynb"
     @fs.write_file(late_before, late_edit(before, "LATE_EDIT_OLD"))
@@ -131,6 +147,9 @@ async fn main {
     replay.push("replay")
     replay.push(path)
     assert_eq(@json.parse(command(replay, 0)[:]), report)
+    let invalid_gate_replay = replay.copy()
+    for arg in ["--gate", "fixtures/gate.json"] { invalid_gate_replay.push(arg) }
+    ignore(command(invalid_gate_replay, 2))
     let markdown_replay = replay.copy()
     markdown_replay.push("--format")
     markdown_replay.push("markdown")

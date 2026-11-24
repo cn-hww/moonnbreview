@@ -35,6 +35,7 @@ fn main {
     let command = args[1]
     let mut format = "json"
     let mut focus_changes = false
+    let mut gate_path : String? = None
     let comparison = if command == "replay" {
       guard args.length() >= 3 else {
         fail(
@@ -45,6 +46,7 @@ fn main {
       let mut i = 3
       while i < args.length() {
         match args[i] {
+          "--gate" => fail("--gate is only valid for check, not replay")
           "--focus-changes" => {
             guard !focus_changes else { fail("--focus-changes may occur once") }
             focus_changes = true
@@ -75,6 +77,17 @@ fn main {
       let mut i = 4
       while i < args.length() {
         match args[i] {
+          "--gate" => {
+            guard command == "check" &&
+              gate_path is None &&
+              i + 1 < args.length() else {
+              fail(
+                "--gate requires one file, may occur once, and is only valid for check",
+              )
+            }
+            i += 1
+            gate_path = Some(args[i])
+          }
           "--focus-changes" => {
             guard !focus_changes else { fail("--focus-changes may occur once") }
             focus_changes = true
@@ -137,6 +150,10 @@ fn main {
         "--focus-changes requires --format markdown on review, check or replay",
       )
     }
+    let gate = match gate_path {
+      Some(path) => @review.Gate::from_json(read(path))
+      None => @review.Gate::new()
+    }
     let text = if command == "bundle" {
       comparison.to_bundle()
     } else if format == "markdown" {
@@ -145,7 +162,7 @@ fn main {
       comparison.to_json()
     }
     println(text)
-    if command == "check" && !comparison.passes() {
+    if command == "check" && !comparison.passes(blocked=gate.blocked()) {
       @env.exit(1)
     }
   } catch {

@@ -13,6 +13,12 @@ test "public notebook review workflow" {
     @review.Document::parse(new),
   )
   assert_false(result.passes())
+  let output_gate = @review.Gate::new(blocked=[@review.Output])
+  assert_true(result.passes(blocked=output_gate.blocked()))
+  assert_eq(
+    @review.Gate::from_json(output_gate.to_json()).to_json(),
+    output_gate.to_json(),
+  )
   assert_eq(result.changes()[0].cell_id, Some("calculation"))
   assert_eq(result.changes()[0].kind, @review.Source)
   let replay = @review.Comparison::from_bundle(result.to_bundle())

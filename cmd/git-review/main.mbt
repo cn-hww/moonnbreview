@@ -10,6 +10,7 @@ async fn main {
     let mut policy_path : String? = None
     let mut format : String? = None
     let mut focus_changes = false
+    let mut gate_path : String? = None
     let mut i = 6
     while i < args.length() {
       if args[i] == "--focus-changes" {
@@ -20,6 +21,12 @@ async fn main {
       }
       guard i + 1 < args.length() else { fail("option requires a value") }
       match args[i] {
+        "--gate" => {
+          guard args[1] == "check" && gate_path is None else {
+            fail("--gate may occur once and is only valid for check")
+          }
+          gate_path = Some(args[i + 1])
+        }
         "--policy" => {
           guard policy_path is None else { fail("--policy may occur once") }
           policy_path = Some(args[i + 1])
@@ -44,6 +51,10 @@ async fn main {
       Some(path) => @review.Policy::from_json(@fs.read_file(path).text())
       None => @review.Policy::new()
     }
+    let gate = match gate_path {
+      Some(path) => @review.Gate::from_json(@fs.read_file(path).text())
+      None => @review.Gate::new()
+    }
     let old = @snapshots.Snapshot::load(args[2], args[3], args[5])
     let new = @snapshots.Snapshot::load(args[2], args[4], args[5])
     let comparison = @review.compare(old.document(), new.document(), policy~)
@@ -55,7 +66,7 @@ async fn main {
       comparison.to_json()
     }
     println(text)
-    if args[1] == "check" && !comparison.passes() {
+    if args[1] == "check" && !comparison.passes(blocked=gate.blocked()) {
       @env.exit(1)
     }
   } catch {

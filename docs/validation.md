@@ -106,3 +106,13 @@ CLI integration. Its executable was `git.exe`, shadowing the real Git when the
 adapter launched a child process. The package is renamed to `cmd/git-review`;
 Git process diagnostics now include exit code, stderr and stdout. Local Windows
 native execution still requires MSVC; the native CI workflow verifies this fix.
+
+## Explicit CI gates (2026-11-24)
+
+Six new public test blocks validate canonical category round trips, complete
+evidence under selective gates, immutable array boundaries, all category names,
+suppression independence, empty gates, malformed/unknown/duplicate fields and
+categories, Unicode, 8192/8193-unit boundaries and recovery. Totals: 64 core blocks
+on four targets, plus five Git blocks on Wasm/native. The CLI verifier checks
+identical report bytes despite different gate verdicts, strict command/option
+handling, invalid files and file/Git entry equivalence against real data.

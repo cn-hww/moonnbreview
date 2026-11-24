@@ -65,6 +65,10 @@ async fn main {
   let file_args = ["check", "fixtures/before.ipynb", "fixtures/after.ipynb", "--policy", "fixtures/policy.json"]
   let git_args = ["check", dir, "HEAD~1", "HEAD", path, "--policy", "fixtures/policy.json"]
   assert_eq(cli(target, "cmd/git-review", git_args, 1), cli(target, "cmd/main", file_args, 1))
+  let gated_git = git_args.copy()
+  let gated_file = file_args.copy()
+  for argv in [gated_git, gated_file] { argv.push("--gate"); argv.push("fixtures/gate.json") }
+  assert_eq(cli(target, "cmd/git-review", gated_git, 1), cli(target, "cmd/main", gated_file, 1))
   let review = git_args.copy()
   review[0] = "review"
   ignore(cli(target, "cmd/git-review", review, 0))
@@ -91,6 +95,8 @@ async fn main {
     ["review", dir, "HEAD", "HEAD", path, "--ignore-execution-counts"],
     ["bundle", dir, "HEAD", "HEAD", path, "--format", "json"],
     ["review", dir, "HEAD", "HEAD", path, "--focus-changes"],
+    ["review", dir, "HEAD", "HEAD", path, "--gate", "fixtures/gate.json"],
+    ["check", dir, "HEAD", "HEAD", path, "--gate", "fixtures/gate.json", "--gate", "fixtures/gate.json"],
     ["review", dir, "HEAD", "HEAD", path, "--format", "markdown", "--focus-changes", "--focus-changes"],
   ] { ignore(cli(target, "cmd/git-review", argv, 2)) }
   assert_eq(@fs.read_file(dir + "/" + path).text(), "unstaged invalid notebook")

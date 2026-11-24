@@ -59,13 +59,17 @@ Use `review|check|bundle REPO OLD_REF NEW_REF PATH` for your own repository.
 The [Git workflow](docs/git.md) documents the reusable snapshot API, real-data
 end-to-end example and its Wasm/native scope.
 
+To choose which active changes block CI, use `check ... --gate fixtures/gate.json`.
+The [gate file](docs/gates.md) selects categories without removing evidence;
+omitting it preserves the default of blocking every active change.
+
 ## Use the library
 
 Import `"cn-hww/moonnbreview" @review` in `moon.pkg`. For checkout development use
 a `moon.work` listing this module and the consuming module. See the compiled
 [public API example](examples.mbt.md) and [generated interface](pkg.generated.mbti).
 
-The small public surface consists of `Document`, `Policy`, `compare`,
+The small public surface consists of `Document`, `Policy`, `Gate`, `compare`,
 `Comparison`, `Change` and `ChangeKind`:
 
 - `Document::parse` validates text; `to_string` retains accepted semantic data;
@@ -78,6 +82,7 @@ The small public surface consists of `Document`, `Policy`, `compare`,
 - `compare` aligns stable IDs and returns an immutable comparison.
 - `changes` and `suppressed` return independent change witnesses.
 - `passes` blocks all active changes by default; callers may select categories.
+  `Gate` persists those category selections as a strict, versioned CI file.
 - `to_json` emits a full versioned report. `to_bundle` / `from_bundle` provide
   deterministic, recomputed replay. There is no trusted report-import verdict.
 - `to_markdown(preview_chars=240)` presents both active and suppressed changes;
