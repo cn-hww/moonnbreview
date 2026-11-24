@@ -85,6 +85,10 @@ Add `--format markdown` to file/Git batch review or offline batch replay for
 [one human-readable batch report](docs/batch-markdown.md), including all file
 outcomes and diagnostics. `--focus-changes` shows the first differing text region.
 
+For a complete CI job, use the [artifact workflow](docs/ci.md). One `.mbtx` command
+saves the retained bundle, JSON, Markdown, JUnit and pinned Git IDs, keeps evidence
+when the gate fails, and reports any export refusal explicitly.
+
 ## Use the library
 
 Import `"cn-hww/moonnbreview" @review` in `moon.pkg`. For checkout development use

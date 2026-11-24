@@ -211,3 +211,13 @@ empty batches and whole-report overflow refusal/recovery. Totals: 127 Wasm/nativ
 The real-data verifier checks file/Git/replay Markdown, cross-backend bytes,
 focused views, errors after source removal and strict flag handling. The existing
 single-comparison Markdown format remains unchanged.
+
+## CI artifact workflow (2026-11-24)
+
+The Git end-to-end verifier also runs `ci-review.mbtx` against real fixture commits,
+checking exact saved/replayed report, bundle, focused Markdown and JUnit bytes,
+full pinned commit IDs, fresh-directory exclusivity, recorded read failures and
+recovery. An XML-illegal manifest ID forces a renderer error: JSON/bundle/Markdown
+remain usable, XML is absent, a named diagnostic is saved and overall exit becomes
+2 while the original gate remains 1. Existing library test counts are unchanged.
+This workflow does not publish packages or treat artifacts as signed approval.

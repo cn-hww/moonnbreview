@@ -39,6 +39,15 @@ async fn cleanup(dir : String) -> Unit nocancel {
   })
 }
 
+async fn pipeline(target : String, repo : String, manifest : String, out : String, expected : Int, gate~ : String? = None, old_revision~ : String = "HEAD~1") -> Unit {
+  let argv = ["run", "--deny-warn", "scripts/ci-review.mbtx", repo, old_revision, "HEAD", manifest, out, "--policy", "fixtures/policy.json", "--target", target]
+  match gate { Some(path) => { argv.push("--gate"); argv.push(path) }; None => () }
+  let result = @shell.Cmd("moon", argv).output()
+  guard result.exit_code() == expected else {
+    println(result.stdout()); println(result.stderr()); fail("unexpected CI pipeline exit")
+  }
+}
+
 async fn main {
   let args = @env.args()
   guard args.length() == 2 && ["wasm", "native"].contains(args[1]) else { fail("usage: verify-git.mbtx wasm|native") }
@@ -104,6 +113,28 @@ async fn main {
   let batch_markdown = batch_args.copy()
   for arg in ["--format", "markdown", "--focus-changes"] { batch_markdown.push(arg) }
   assert_eq(cli(target, "cmd/git-batch", batch_markdown, 1), cli(target, "cmd/batch", ["replay", bundle_path, "--format", "markdown", "--focus-changes"], 1))
+  let captured_dir = artifacts + "/CI artifacts 课程"
+  pipeline(target, dir, manifest_path, captured_dir, 1)
+  assert_eq(@fs.read_file(captured_dir + "/report.json").text(), batch)
+  let allow_gate = artifacts + "/allow-all.json"
+  @fs.write_file(allow_gate, "{\"format\":\"moonnbreview/gate-1\",\"blocked\":[]}")
+  let passed_dir = artifacts + "/all-passed"
+  pipeline(target, dir, manifest_path, passed_dir, 0, gate=Some(allow_gate))
+  assert_true(@fs.read_file(passed_dir + "/run.json").text().contains("\"exit_code\":0"))
+  let invalid_dir = artifacts + "/invalid-revision"
+  pipeline(target, dir, manifest_path, invalid_dir, 2, old_revision="missing-ref")
+  assert_false(@fs.exists(invalid_dir))
+  assert_eq(@fs.read_file(captured_dir + "/bundle.json").text(), @fs.read_file(bundle_path).text())
+  assert_eq(@fs.read_file(captured_dir + "/review.md").text(), cli(target, "cmd/git-batch", batch_markdown, 1))
+  assert_eq(@fs.read_file(captured_dir + "/junit.xml").text(), cli(target, "cmd/git-batch", batch_junit, 1))
+  let completion = @fs.read_file(captured_dir + "/run.json").text()
+  guard @json.parse(completion) is Object(run) && @json.parse(@fs.read_file(captured_dir + "/provenance.json").text()) is Object(provenance) else { fail("missing CI metadata") }
+  assert_eq(run["complete"], Json(true)); assert_eq(run["exit_code"], Json(1))
+  assert_eq(provenance["old_commit"], Json(git(dir, ["rev-parse", "HEAD~1"]).trim().to_owned()))
+  assert_eq(provenance["new_commit"], Json(head.trim().to_owned()))
+  pipeline(target, dir, manifest_path, captured_dir, 2)
+  assert_eq(@fs.read_file(captured_dir + "/run.json").text(), completion)
+  assert_eq(@fs.read_file(captured_dir + "/report.json").text(), batch)
   ignore(cli(target, "cmd/git-batch", ["check", dir, "HEAD", "HEAD", manifest_path], 0))
   let failed_manifest : Json = {"format":"moonnbreview/manifest-1", "pairs":[
     {"id":"missing", "old":"missing.ipynb", "new":Json(path)},
@@ -112,6 +143,20 @@ async fn main {
   @fs.write_file(manifest_path, failed_manifest.stringify())
   let failed = cli(target, "cmd/git-batch", batch_args, 2)
   assert_true(failed.contains("read_old") && failed.contains("\"status\":\"blocked\""))
+  let error_dir = artifacts + "/input-errors"
+  pipeline(target, dir, manifest_path, error_dir, 2)
+  assert_eq(@fs.read_file(error_dir + "/report.json").text(), failed)
+  assert_true(@fs.read_file(error_dir + "/run.json").text().contains("\"complete\":true"))
+  let unrepresentable : Json = {"format":"moonnbreview/manifest-1", "pairs":[{"id":"bad\uFFFE", "old":Json(path), "new":Json(path)}]}
+  @fs.write_file(manifest_path, unrepresentable.stringify())
+  let refused_dir = artifacts + "/renderer-refusal"
+  pipeline(target, dir, manifest_path, refused_dir, 2)
+  assert_false(@fs.exists(refused_dir + "/junit.xml"))
+  assert_true(@fs.exists(refused_dir + "/junit.xml.error.txt"))
+  assert_true(@fs.exists(refused_dir + "/bundle.json") && @fs.exists(refused_dir + "/report.json") && @fs.exists(refused_dir + "/review.md"))
+  guard @json.parse(@fs.read_file(refused_dir + "/run.json").text()) is Object(refusal) else { fail("missing renderer refusal") }
+  assert_eq(refusal["gate_exit"], Json(1)); assert_eq(refusal["exit_code"], Json(2))
+  @fs.write_file(manifest_path, failed_manifest.stringify())
   for extra in [["--format", "pdf"], ["--format", "json", "--format", "junit"], ["--policy"], ["--unknown", "x"], ["--focus-changes"], ["--format", "markdown", "--focus-changes", "--focus-changes"]] {
     let bad = batch_args.copy()
     for arg in extra { bad.push(arg) }

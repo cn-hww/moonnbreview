@@ -75,7 +75,7 @@ async fn main {
   let args = @env.args()
   guard args.length() == 1 || args == [args[0], "--portable"] || args == [args[0], "--native"] else { fail("usage: verify.mbtx [--portable|--native]") }
   let targets = if args.length() == 2 && args[1] == "--portable" { ["wasm", "wasm-gc", "js"] } else if args.length() == 2 { ["native"] } else { ["wasm", "wasm-gc", "js", "native"] }
-  for path in ["scripts/verify.mbtx", "scripts/prepare-fixture.mbtx", "scripts/verify-git.mbtx"] {
+  for path in ["scripts/verify.mbtx", "scripts/prepare-fixture.mbtx", "scripts/verify-git.mbtx", "scripts/ci-review.mbtx"] {
     ignore(command(["fmt", path], 0))
   }
   for args in [["fmt"], ["info"], ["check", "--target", "all", "--deny-warn"]] {

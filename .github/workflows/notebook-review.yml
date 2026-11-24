@@ -1,0 +1,54 @@
+name: notebook-review
+on:
+  workflow_dispatch:
+    inputs:
+      old_ref:
+        description: Baseline commit or local revision
+        required: true
+        default: HEAD
+      new_ref:
+        description: Proposed commit or local revision
+        required: true
+        default: HEAD
+      manifest:
+        description: Explicit manifest path in this checkout
+        required: true
+        default: fixtures/manifest.json
+      policy:
+        description: Noise policy path in this checkout
+        required: true
+        default: fixtures/policy.json
+      gate:
+        description: Blocking categories path in this checkout
+        required: true
+        default: fixtures/gate.json
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: hustcer/setup-moonbit@bdc8c076af1f4c5012a6ac3451a2009ec75bf921
+        with:
+          version: '0.10.22+124d61d05'
+          core-version: '0.10.22+124d61d05'
+      - run: moon update
+      - name: Review committed notebooks and retain evidence
+        env:
+          OLD_REF: ${{ inputs.old_ref }}
+          NEW_REF: ${{ inputs.new_ref }}
+          MANIFEST: ${{ inputs.manifest }}
+          POLICY: ${{ inputs.policy }}
+          GATE: ${{ inputs.gate }}
+        run: moon run --deny-warn scripts/ci-review.mbtx . "$OLD_REF" "$NEW_REF" "$MANIFEST" "$RUNNER_TEMP/notebook-evidence" --policy "$POLICY" --gate "$GATE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: notebook-evidence
+          path: ${{ runner.temp }}/notebook-evidence
+          retention-days: 7
+          if-no-files-found: warn

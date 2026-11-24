@@ -1,0 +1,125 @@
+----
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+fn text(output : @shell.Output) -> String {
+  output.stdout().replace_all(old="\r\n", new="\n")
+}
+
+async fn commit(repo : String, revision : String) -> String {
+  let result = @shell.Cmd("git", ["--no-pager", "--no-replace-objects", "rev-parse", "--verify", "--end-of-options", revision + "^{commit}"], cwd=repo, env={"GIT_NO_LAZY_FETCH":"1", "GIT_TERMINAL_PROMPT":"0"}).output(timeout_ms=30000, max_output_bytes=65536)
+  guard result.exit_code() == 0 else {
+    fail("cannot resolve revision: " + result.stderr() + result.stdout())
+  }
+  let sha = text(result).trim().to_owned()
+  guard (sha.length() == 40 || sha.length() == 64) && sha.iter().all(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) else {
+    fail("Git did not resolve exactly one commit")
+  }
+  sha
+}
+
+async fn cli(target : String, entry : String, args : Array[String]) -> @shell.Output {
+  let argv = ["run", "--deny-warn", "--target", target, entry, "--"]
+  for arg in args { argv.push(arg) }
+  @shell.Cmd("moon", argv).output(timeout_ms=300000, max_output_bytes=64000000)
+}
+
+async fn run(args : Array[String]) -> Int {
+  guard args.length() >= 6 else {
+    fail("usage: ci-review.mbtx REPO OLD_REF NEW_REF MANIFEST NEW_OUTPUT_DIR [--policy FILE] [--gate FILE] [--target wasm|native]")
+  }
+  let out = args[5]
+  guard !out.is_empty() && !( @fs.exists(out) ) else {
+    fail("output directory must not exist; choose a fresh artifact directory")
+  }
+  let mut target = "wasm"
+  let mut explicit_target = false
+  let mut policy : String? = None
+  let mut gate : String? = None
+  let mut i = 6
+  while i < args.length() {
+    guard i + 1 < args.length() else { fail("option requires a value") }
+    match args[i] {
+      "--policy" => { guard policy is None else { fail("duplicate --policy") }; policy = Some(args[i + 1]) }
+      "--gate" => { guard gate is None else { fail("duplicate --gate") }; gate = Some(args[i + 1]) }
+      "--target" => {
+        guard !explicit_target && ["wasm", "native"].contains(args[i + 1]) else { fail("--target wasm|native may occur once") }
+        explicit_target = true
+        target = args[i + 1]
+      }
+      _ => fail("unknown argument: " + args[i])
+    }
+    i += 2
+  }
+  // Pin both names before the batch starts; notebook content comes from these IDs.
+  let old = commit(args[1], args[2])
+  let new = commit(args[1], args[3])
+  let capture_args = ["bundle", args[1], old, new, args[4]]
+  match policy { Some(path) => { capture_args.push("--policy"); capture_args.push(path) }; None => () }
+  match gate { Some(path) => { capture_args.push("--gate"); capture_args.push(path) }; None => () }
+  let capture = cli(target, "cmd/git-batch", capture_args)
+  let bundle = text(capture)
+  guard [0, 2].contains(capture.exit_code()) &&
+    (@json.parse(bundle, max_nesting_depth=80, preserve_number_repr=true) catch { _ => Json::null() }) is Object(fields) &&
+    fields.get("format") == Some(Json("moonnbreview/batch-bundle-1")) else {
+    fail("batch capture failed; no artifact directory created: " + bundle + capture.stderr())
+  }
+  // Exclusive mkdir protects existing inputs/artifacts. Any interrupted write can
+  // leave a new incomplete directory, but run.json is written only on completion.
+  @fs.mkdir(out)
+  let bundle_path = out + "/bundle.json"
+  @fs.write_file(bundle_path, bundle)
+  let provenance : Json = {"format":"moonnbreview/ci-provenance-1", "old_commit":Json(old), "new_commit":Json(new), "manifest":Json(args[4]), "target":Json(target)}
+  @fs.write_file(out + "/provenance.json", provenance.stringify() + "\n")
+  let replay = cli(target, "cmd/batch", ["replay", bundle_path])
+  let report = text(replay)
+  let gate_code = replay.exit_code()
+  guard [0, 1, 2].contains(gate_code) &&
+    (@json.parse(report, max_nesting_depth=80, preserve_number_repr=true) catch { _ => Json::null() }) is Object(root) &&
+    root.get("format") == Some(Json("moonnbreview/batch-1")) else {
+    fail("replay failed; bundle retained, but artifact directory is incomplete: " + report + replay.stderr())
+  }
+  @fs.write_file(out + "/report.json", report)
+  let formats : Array[Json] = []
+  let mut code = gate_code
+  for (format, filename) in [("markdown", "review.md"), ("junit", "junit.xml")] {
+    let argv = ["replay", bundle_path, "--format", format]
+    if format == "markdown" { argv.push("--focus-changes") }
+    let rendered = cli(target, "cmd/batch", argv)
+    let payload = text(rendered)
+    // Exit 2 can be a recorded pair failure OR renderer refusal. Check the
+    // expected document marker as well; never label diagnostic text as XML/MD.
+    let valid = rendered.exit_code() == gate_code && (if format == "markdown" {
+      payload.has_prefix("# Notebook batch review\n")
+    } else {
+      payload.has_prefix("<?xml ") || payload.has_prefix("<testsuite")
+    })
+    if valid {
+      @fs.write_file(out + "/" + filename, payload)
+      formats.push({"format":Json(format), "file":Json(filename), "status":"written"})
+    } else {
+      code = 2
+      let error_file = filename + ".error.txt"
+      @fs.write_file(out + "/" + error_file, payload + rendered.stderr())
+      formats.push({"format":Json(format), "file":Json(error_file), "status":"error"})
+    }
+  }
+  let completion : Json = {"format":"moonnbreview/ci-run-1", "complete":true, "gate_exit":Json(gate_code), "exit_code":Json(code), "renderers":Json(formats)}
+  @fs.write_file(out + "/run.json", completion.stringify() + "\n")
+  println(completion.stringify())
+  code
+}
+
+async fn main {
+  try {
+    @env.exit(run(@env.args()))
+  } catch {
+    e => { println("\{Repr(e)}"); @env.exit(2) }
+  }
+}
