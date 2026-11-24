@@ -24,6 +24,7 @@ pub fn BatchReview::exit_code(Self) -> Int32
 pub fn BatchReview::from_bundle(String) -> Self raise ReviewError
 pub fn BatchReview::to_bundle(Self) -> String raise ReviewError
 pub fn BatchReview::to_json(Self) -> String
+pub fn BatchReview::to_markdown(Self, preview_chars? : Int32, focus_changes? : Bool) -> String raise ReviewError
 
 #derive(@debug.Debug)
 pub struct Change {

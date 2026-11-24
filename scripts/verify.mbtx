@@ -90,6 +90,7 @@ async fn main {
   let mut batch_baseline : String? = None
   let mut mime_baseline : String? = None
   let mut junit_baseline : String? = None
+  let mut batch_markdown_baseline : String? = None
   for target in targets {
     println(command(["test", "--target", target, "--deny-warn"], 0))
     if target == "wasm" || target == "native" {
@@ -216,6 +217,27 @@ async fn main {
     let batch_replay = batch_prefix.copy()
     for arg in ["replay", batch_bundle_path] { batch_replay.push(arg) }
     assert_eq(console_text(command(batch_replay, 1)), batch_text)
+    let batch_markdown_args = batch_args.copy()
+    for arg in ["--format", "markdown"] { batch_markdown_args.push(arg) }
+    let batch_markdown = console_text(command(batch_markdown_args, 1))
+    assert_true(batch_markdown.contains("## Notebook 1: blocked") && batch_markdown.contains("## Notebook 2: passed") && batch_markdown.contains("### Suppressed changes: 2"))
+    let batch_md_replay = batch_replay.copy()
+    for arg in ["--format", "markdown"] { batch_md_replay.push(arg) }
+    assert_eq(console_text(command(batch_md_replay, 1)), batch_markdown)
+    match batch_markdown_baseline {
+      None => batch_markdown_baseline = Some(batch_markdown)
+      Some(value) => { assert_eq(batch_markdown, value) }
+    }
+    batch_markdown_args.push("--focus-changes")
+    batch_md_replay.push("--focus-changes")
+    let batch_focused = console_text(command(batch_markdown_args, 1))
+    assert_true(batch_focused.contains("Preview range:"))
+    assert_eq(console_text(command(batch_md_replay, 1)), batch_focused)
+    for extra in [["--focus-changes"], ["--format", "junit", "--focus-changes"], ["--format", "markdown", "--focus-changes", "--focus-changes"]] {
+      let bad = batch_args.copy()
+      for arg in extra { bad.push(arg) }
+      ignore(command(bad, 2))
+    }
     let batch_xml_replay = batch_replay.copy()
     for arg in ["--format", "junit"] { batch_xml_replay.push(arg) }
     assert_eq(console_text(command(batch_xml_replay, 1)), batch_xml)
@@ -244,6 +266,8 @@ async fn main {
     @fs.write_file(batch_bundle_path, command(batch_errors, 2))
     @fs.remove(bad_notebook)
     assert_eq(console_text(command(batch_replay, 2)), error_report)
+    let error_markdown = console_text(command(batch_md_replay, 2))
+    assert_true(error_markdown.contains("## Notebook 1: error") && error_markdown.contains("## Notebook 2: error") && error_markdown.contains("## Notebook 3: passed"))
     check_junit(console_text(command(batch_xml_replay, 2)), 3, 0, 2)
     @fs.write_file(batch_bundle_path, "{}")
     ignore(command(batch_replay, 2))

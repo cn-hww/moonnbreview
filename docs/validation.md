@@ -199,3 +199,15 @@ blocks on Wasm/native. Wasm-GC runs 98 core + 9 JUnit blocks: Moon's runner skip
 the two async tests on that backend, so no Wasm-GC async execution is claimed.
 The Git end-to-end verifier now exercises batch CLI JSON,
 JUnit, retained replay, strict options and 0/1/2 on real Jupyter-derived data.
+
+## Human-readable batch evidence (2026-11-24)
+
+Seven new black-box blocks cover every pair status, complete configuration and
+diagnostics, default non-retained rendering, replay/determinism, unchanged JSON and
+bundles, allowed active/suppressed witnesses, hostile markup/fences, visible controls,
+surrogate-safe boundary/focused previews, invalid budgets, absent versus null,
+empty batches and whole-report overflow refusal/recovery. Totals: 127 Wasm/native,
+116 JS and 114 Wasm-GC (the latter excludes the two async tests).
+The real-data verifier checks file/Git/replay Markdown, cross-backend bytes,
+focused views, errors after source removal and strict flag handling. The existing
+single-comparison Markdown format remains unchanged.

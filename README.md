@@ -81,6 +81,9 @@ the original gate/error exit semantics.
 `moon run cmd/git-batch -- check . HEAD HEAD fixtures/manifest.json` reviews an
 entire explicit manifest directly from pinned Git revisions, including separate
 old/new paths. See [Git batch review](docs/git-batch.md) for library APIs and replay.
+Add `--format markdown` to file/Git batch review or offline batch replay for
+[one human-readable batch report](docs/batch-markdown.md), including all file
+outcomes and diagnostics. `--focus-changes` shows the first differing text region.
 
 ## Use the library
 

@@ -17,16 +17,22 @@ fn arguments() -> Array[String] {
 
 ///|
 fn format(text : String) -> String raise {
-  guard ["json", "junit"].contains(text) else {
-    fail("--format must be json or junit")
+  guard ["json", "junit", "markdown"].contains(text) else {
+    fail("--format must be json, junit or markdown")
   }
   text
 }
 
 ///|
-fn render(batch : @review.BatchReview, format : String) -> String raise {
+fn render(
+  batch : @review.BatchReview,
+  format : String,
+  focus : Bool,
+) -> String raise {
   if format == "junit" {
     @junit.render(batch)
+  } else if format == "markdown" {
+    batch.to_markdown(focus_changes=focus)
   } else {
     batch.to_json()
   }
@@ -39,29 +45,21 @@ fn main {
     guard args.length() >= 3 &&
       ["review", "check", "bundle", "replay"].contains(args[1]) else {
       fail(
-        "usage: review|check MANIFEST.json [--format json|junit] [--policy FILE] [--gate FILE (check)] | bundle MANIFEST.json [--policy FILE] [--gate FILE] | replay BUNDLE.json [--format json|junit]",
+        "usage: review|check MANIFEST.json [--format json|junit|markdown] [--focus-changes] [--policy FILE] [--gate FILE (check)] | bundle MANIFEST.json [--policy FILE] [--gate FILE] | replay BUNDLE.json [--format json|junit|markdown] [--focus-changes]",
       )
-    }
-    if args[1] == "replay" {
-      guard args.length() == 3 || (args.length() == 5 && args[3] == "--format") else {
-        fail(
-          "batch replay accepts only its bundle; no replacement policy or gate",
-        )
-      }
-      let output_format = if args.length() == 5 {
-        format(args[4])
-      } else {
-        "json"
-      }
-      let replay = @review.BatchReview::from_bundle(read(args[2]))
-      println(render(replay, output_format))
-      @env.exit(replay.exit_code())
     }
     let mut policy_path : String? = None
     let mut gate_path : String? = None
     let mut output_format : String? = None
+    let mut focus_changes = false
     let mut i = 3
     while i < args.length() {
+      if args[i] == "--focus-changes" {
+        guard !focus_changes else { fail("--focus-changes may occur once") }
+        focus_changes = true
+        i += 1
+        continue
+      }
       guard i + 1 < args.length() else { fail("option requires a file") }
       match args[i] {
         "--format" => {
@@ -73,7 +71,11 @@ fn main {
           output_format = Some(format(args[i + 1]))
         }
         "--policy" => {
-          guard policy_path is None else { fail("--policy may occur once") }
+          guard args[1] != "replay" && policy_path is None else {
+            fail(
+              "--policy may occur once on review/check/bundle; replay uses its retained policy",
+            )
+          }
           policy_path = Some(args[i + 1])
         }
         "--gate" => {
@@ -85,6 +87,14 @@ fn main {
         _ => fail("unknown argument: " + args[i])
       }
       i += 2
+    }
+    guard !focus_changes || output_format == Some("markdown") else {
+      fail("--focus-changes requires --format markdown on review/check/replay")
+    }
+    if args[1] == "replay" {
+      let replay = @review.BatchReview::from_bundle(read(args[2]))
+      println(render(replay, output_format.unwrap_or("json"), focus_changes))
+      @env.exit(replay.exit_code())
     }
     let policy = match policy_path {
       Some(path) => @review.Policy::from_json(read(path))
@@ -104,7 +114,7 @@ fn main {
       if args[1] == "bundle" {
         report.to_bundle()
       } else {
-        render(report, output_format.unwrap_or("json"))
+        render(report, output_format.unwrap_or("json"), focus_changes)
       },
     )
     let code = report.exit_code()

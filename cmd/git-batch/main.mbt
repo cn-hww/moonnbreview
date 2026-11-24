@@ -4,14 +4,21 @@ async fn main {
     let args = @env.args()
     guard args.length() >= 6 && ["review", "check", "bundle"].contains(args[1]) else {
       fail(
-        "usage: review|check|bundle REPO OLD_REF NEW_REF MANIFEST [--policy FILE] [--gate FILE] [--format json|junit]",
+        "usage: review|check|bundle REPO OLD_REF NEW_REF MANIFEST [--policy FILE] [--gate FILE] [--format json|junit|markdown] [--focus-changes]",
       )
     }
     let mut policy_path : String? = None
     let mut gate_path : String? = None
     let mut format : String? = None
+    let mut focus_changes = false
     let mut i = 6
     while i < args.length() {
+      if args[i] == "--focus-changes" {
+        guard !focus_changes else { fail("--focus-changes may occur once") }
+        focus_changes = true
+        i += 1
+        continue
+      }
       guard i + 1 < args.length() else { fail("option requires a value") }
       match args[i] {
         "--policy" => {
@@ -27,14 +34,19 @@ async fn main {
         "--format" => {
           guard args[1] != "bundle" &&
             format is None &&
-            ["json", "junit"].contains(args[i + 1]) else {
-            fail("--format json|junit may occur once on review or check")
+            ["json", "junit", "markdown"].contains(args[i + 1]) else {
+            fail(
+              "--format json|junit|markdown may occur once on review or check",
+            )
           }
           format = Some(args[i + 1])
         }
         _ => fail("unknown argument: " + args[i])
       }
       i += 2
+    }
+    guard !focus_changes || format == Some("markdown") else {
+      fail("--focus-changes requires --format markdown on review/check")
     }
     let policy = match policy_path {
       Some(path) => @review.Policy::from_json(@fs.read_file(path).text())
@@ -57,6 +69,8 @@ async fn main {
         batch.to_bundle()
       } else if format == Some("junit") {
         @junit.render(batch)
+      } else if format == Some("markdown") {
+        batch.to_markdown(focus_changes~)
       } else {
         batch.to_json()
       },

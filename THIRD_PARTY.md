@@ -20,7 +20,8 @@ and development scripts resolve additional transitive packages through the modul
 graph; `moon tree` shows the exact graph. Their license files remain in dependency
 archives. `moonbitlang/async 0.22.4` (Apache-2.0) is used by development automation
 and the optional Git snapshot/batch library/CLI; async source tests exercise its
-runtime on all four backends. Git is an external process prerequisite,
+runtime on Wasm, JS and native (the current runner skips async tests on Wasm-GC).
+Git is an external process prerequisite,
 not bundled source; command behavior references are linked in [Git workflow](docs/git.md).
 Dependencies are fetched by Moon and are not vendored into this repository.
 

@@ -16,7 +16,8 @@ filesystem; notebook contents come exclusively from the selected Git objects.
 
 `review|check|bundle REPO OLD_REF NEW_REF MANIFEST` accepts `--policy FILE`.
 `check` and `bundle` also accept `--gate FILE`. Review/check accept
-`--format json|junit`; bundles have the fixed batch-bundle-1 JSON format.
+`--format json|junit|markdown`; Markdown also supports `--focus-changes`.
+See [batch Markdown](batch-markdown.md). Bundles have the fixed batch-bundle-1 JSON format.
 Check exits 0/1/2. Review/bundle exit 0 for valid blocked results, 2 for any pair
 error. Bundle output can be replayed with the portable `cmd/batch replay FILE`,
 including its retained policy/gate and recorded failures, without Git installed.

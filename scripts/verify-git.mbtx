@@ -101,6 +101,9 @@ async fn main {
   let batch_junit = batch_args.copy()
   batch_junit.push("--format"); batch_junit.push("junit")
   assert_eq(cli(target, "cmd/git-batch", batch_junit, 1), cli(target, "cmd/batch", ["replay", bundle_path, "--format", "junit"], 1))
+  let batch_markdown = batch_args.copy()
+  for arg in ["--format", "markdown", "--focus-changes"] { batch_markdown.push(arg) }
+  assert_eq(cli(target, "cmd/git-batch", batch_markdown, 1), cli(target, "cmd/batch", ["replay", bundle_path, "--format", "markdown", "--focus-changes"], 1))
   ignore(cli(target, "cmd/git-batch", ["check", dir, "HEAD", "HEAD", manifest_path], 0))
   let failed_manifest : Json = {"format":"moonnbreview/manifest-1", "pairs":[
     {"id":"missing", "old":"missing.ipynb", "new":Json(path)},
@@ -109,7 +112,7 @@ async fn main {
   @fs.write_file(manifest_path, failed_manifest.stringify())
   let failed = cli(target, "cmd/git-batch", batch_args, 2)
   assert_true(failed.contains("read_old") && failed.contains("\"status\":\"blocked\""))
-  for extra in [["--format", "pdf"], ["--format", "json", "--format", "junit"], ["--policy"], ["--unknown", "x"]] {
+  for extra in [["--format", "pdf"], ["--format", "json", "--format", "junit"], ["--policy"], ["--unknown", "x"], ["--focus-changes"], ["--format", "markdown", "--focus-changes", "--focus-changes"]] {
     let bad = batch_args.copy()
     for arg in extra { bad.push(arg) }
     ignore(cli(target, "cmd/git-batch", bad, 2))

@@ -41,6 +41,8 @@ test "public notebook review workflow" {
   ])
   let batch = manifest.review(path => if path == "base" { old } else { new })
   assert_eq(batch.exit_code(), 1)
+  assert_true(batch.to_markdown().contains("## Notebook 1: blocked"))
+  assert_true(batch.to_markdown(focus_changes=true).contains("Preview range:"))
   let separate = @review.Manifest::new([
     { id: "analysis", old_path: "lesson.ipynb", new_path: "lesson.ipynb", },
   ]).review_sides(_ => old, _ => new, retain_inputs=true)

@@ -155,8 +155,11 @@ fn MarkdownWriter::change(
   number : Int32,
   preview_chars : Int32,
   focus_changes : Bool,
+  heading~ : String = "###",
 ) -> Unit raise ReviewError {
-  self.write("### " + number.to_string() + ". " + change.kind.label() + "\n\n")
+  self.write(
+    heading + " " + number.to_string() + ". " + change.kind.label() + "\n\n",
+  )
   self.block(
     canonical({
       "cell_id": change.cell_id.map(Json::string).unwrap_or(Json::null()),
