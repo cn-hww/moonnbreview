@@ -32,6 +32,8 @@ pub struct Change {
   after : @json.Json?
   suppressed_by : String?
 }
+pub fn Change::mime_category(Self) -> MimeCategory?
+pub fn Change::mime_key(Self) -> String?
 
 #derive(Eq, @debug.Debug)
 pub(all) enum ChangeKind {
@@ -50,10 +52,11 @@ pub struct Comparison {
 }
 pub fn Comparison::changes(Self) -> Array[Change]
 pub fn Comparison::from_bundle(String) -> Self raise ReviewError
+pub fn Comparison::mime_changes(Self) -> Array[MimeGroup]
 pub fn Comparison::passes(Self, blocked? : Array[ChangeKind]) -> Bool
 pub fn Comparison::suppressed(Self) -> Array[Change]
 pub fn Comparison::to_bundle(Self) -> String raise ReviewError
-pub fn Comparison::to_html(Self) -> String raise ReviewError
+pub fn Comparison::to_html(Self, group_mime? : Bool) -> String raise ReviewError
 pub fn Comparison::to_json(Self) -> String raise ReviewError
 pub fn Comparison::to_markdown(Self, preview_chars? : Int32, focus_changes? : Bool) -> String raise ReviewError
 
@@ -80,6 +83,20 @@ pub fn Manifest::new(Array[ReviewPair]) -> Self raise ReviewError
 pub fn Manifest::pairs(Self) -> Array[ReviewPair]
 pub fn Manifest::review(Self, (String) -> String raise, policy? : Policy, gate? : Gate) -> BatchReview raise ReviewError
 pub fn Manifest::to_json(Self) -> String
+
+#derive(Eq, @debug.Debug)
+pub(all) enum MimeCategory {
+  Text
+  StructuredJson
+  Image
+  Opaque
+}
+
+pub struct MimeGroup {
+  key : String
+  category : MimeCategory
+  changes : Array[Change]
+}
 
 pub struct Policy {
   // private fields

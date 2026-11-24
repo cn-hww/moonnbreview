@@ -35,6 +35,7 @@ fn main {
     let command = args[1]
     let mut format = "json"
     let mut focus_changes = false
+    let mut group_mime = false
     let mut gate_path : String? = None
     let comparison = if command == "replay" {
       guard args.length() >= 3 else {
@@ -46,6 +47,10 @@ fn main {
       let mut i = 3
       while i < args.length() {
         match args[i] {
+          "--group-mime" => {
+            guard !group_mime else { fail("--group-mime may occur once") }
+            group_mime = true
+          }
           "--gate" => fail("--gate is only valid for check, not replay")
           "--focus-changes" => {
             guard !focus_changes else { fail("--focus-changes may occur once") }
@@ -77,6 +82,10 @@ fn main {
       let mut i = 4
       while i < args.length() {
         match args[i] {
+          "--group-mime" => {
+            guard !group_mime else { fail("--group-mime may occur once") }
+            group_mime = true
+          }
           "--gate" => {
             guard command == "check" &&
               gate_path is None &&
@@ -154,12 +163,15 @@ fn main {
       Some(path) => @review.Gate::from_json(read(path))
       None => @review.Gate::new()
     }
+    guard !group_mime || (format == "html" && command != "bundle") else {
+      fail("--group-mime requires --format html on review, check or replay")
+    }
     let text = if command == "bundle" {
       comparison.to_bundle()
     } else if format == "markdown" {
       comparison.to_markdown(focus_changes~)
     } else if format == "html" {
-      comparison.to_html()
+      comparison.to_html(group_mime~)
     } else {
       comparison.to_json()
     }

@@ -32,6 +32,10 @@ test "public notebook review workflow" {
   assert_eq(configured.to_json(), result.to_json())
   assert_true(configured.to_markdown().contains("Active changes: 1"))
   assert_true(configured.to_html().contains("Complete JSON evidence"))
+  assert_eq(configured.mime_changes().length(), 0)
+  assert_true(
+    configured.to_html(group_mime=true).contains("MIME-addressed changes"),
+  )
   let manifest = @review.Manifest::new([
     { id: "analysis", old_path: "base", new_path: "proposed", },
   ])

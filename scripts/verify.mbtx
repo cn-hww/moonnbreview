@@ -41,6 +41,22 @@ fn late_edit(source : String, ending : String) -> String raise {
   Json(root).stringify()
 }
 
+fn mime_edit(source : String, result : Int32) -> String raise {
+  guard @json.parse(source) is Object(root) && root["cells"] is Array(cells) else { fail("unexpected notebook fixture") }
+  let mut found = false
+  for cell in cells {
+    guard cell is Object(fields) else { fail("invalid fixture cell") }
+    if fields.get("cell_type") == Some(Json("code")) {
+      let output : Json = {"output_type":"display_data", "metadata":{}, "data":{"text/plain":Json("result: " + result.to_string()), "application/json":{"result":Json(result)}}}
+      fields["outputs"] = Json([output])
+      found = true
+      break
+    }
+  }
+  guard found else { fail("fixture has no code cell") }
+  Json(root).stringify()
+}
+
 async fn main {
   assert_eq(console_text("a\r\nb\r\nc\r\n"), "a\nb\nc\n")
   assert_eq(console_text("{\"text\":\"a\\r\\nb\\r\\n\"}\r\n"), "{\"text\":\"a\\r\\nb\\r\\n\"}\n")
@@ -60,6 +76,7 @@ async fn main {
   let mut focused_baseline : String? = None
   let mut html_baseline : String? = None
   let mut batch_baseline : String? = None
+  let mut mime_baseline : String? = None
   for target in targets {
     println(command(["test", "--target", target, "--deny-warn"], 0))
     if target == "wasm" || target == "native" {
@@ -118,6 +135,16 @@ async fn main {
       None => html_baseline = Some(html)
       Some(value) => { assert_eq(html, value) }
     }
+    let grouped_html_args = html_args.copy()
+    grouped_html_args.push("--group-mime")
+    let grouped_html = console_text(command(grouped_html_args, 1))
+    assert_eq(html_evidence(grouped_html), report)
+    let duplicate_group = grouped_html_args.copy()
+    duplicate_group.push("--group-mime")
+    ignore(command(duplicate_group, 2))
+    let json_group = policy_args.copy()
+    json_group.push("--group-mime")
+    ignore(command(json_group, 2))
     let invalid_html_focus = html_args.copy()
     invalid_html_focus.push("--focus-changes")
     ignore(command(invalid_html_focus, 2))
@@ -205,6 +232,20 @@ async fn main {
     assert_true(late_focused.contains("LATE_EDIT_OLD"))
     assert_true(late_focused.contains("LATE_EDIT_NEW"))
     assert_true(late_focused.contains("units before and 0 after"))
+    let mime_before = dir + "/mime-before.ipynb"
+    let mime_after = dir + "/mime-after.ipynb"
+    @fs.write_file(mime_before, mime_edit(before, 1))
+    @fs.write_file(mime_after, mime_edit(before, 2))
+    let mime_args = prefix.copy()
+    for arg in ["check", mime_before, mime_after, "--format", "html", "--group-mime"] { mime_args.push(arg) }
+    let mime_html = console_text(command(mime_args, 1))
+    guard mime_html.contains("MIME data key") && mime_html.contains("application/json") && mime_html.contains("text/plain") else { fail("rich fixture lost MIME groups") }
+    guard html_evidence(mime_html) is Object(mime_report) && mime_report["changes"] is Array(mime_changes) else { fail("missing MIME evidence") }
+    assert_eq(mime_changes.length(), 2)
+    match mime_baseline {
+      None => mime_baseline = Some(mime_html)
+      Some(value) => { assert_eq(mime_html, value) }
+    }
     @fs.write_file(path, bundle)
     let replay = prefix.copy()
     replay.push("replay")
@@ -213,6 +254,8 @@ async fn main {
     let html_replay = replay.copy()
     for arg in ["--format", "html"] { html_replay.push(arg) }
     assert_eq(console_text(command(html_replay, 0)), html)
+    html_replay.push("--group-mime")
+    assert_eq(console_text(command(html_replay, 0)), grouped_html)
     let invalid_gate_replay = replay.copy()
     for arg in ["--gate", "fixtures/gate.json"] { invalid_gate_replay.push(arg) }
     ignore(command(invalid_gate_replay, 2))

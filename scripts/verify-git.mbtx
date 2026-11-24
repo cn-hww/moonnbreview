@@ -88,6 +88,10 @@ async fn main {
   let html = cli(target, "cmd/git-review", html_git, 1)
   assert_eq(html, cli(target, "cmd/main", html_file, 1))
   assert_eq(html, cli(target, "cmd/main", ["replay", bundle_path, "--format", "html"], 0))
+  for argv in [html_git, html_file] { argv.push("--group-mime") }
+  let grouped_html = cli(target, "cmd/git-review", html_git, 1)
+  assert_eq(grouped_html, cli(target, "cmd/main", html_file, 1))
+  assert_eq(grouped_html, cli(target, "cmd/main", ["replay", bundle_path, "--format", "html", "--group-mime"], 0))
   for argv in [file_args, git_args] { argv.push("--focus-changes") }
   let focused = cli(target, "cmd/git-review", git_args, 1)
   assert_eq(focused, cli(target, "cmd/main", file_args, 1))
@@ -98,6 +102,8 @@ async fn main {
     ["review", dir, "HEAD", "HEAD", "../lesson.ipynb"],
     ["review", dir, "HEAD", "HEAD", path, "--format", "pdf"],
     ["review", dir, "HEAD", "HEAD", path, "--format", "html", "--focus-changes"],
+    ["review", dir, "HEAD", "HEAD", path, "--group-mime"],
+    ["review", dir, "HEAD", "HEAD", path, "--format", "html", "--group-mime", "--group-mime"],
     ["review", dir, "HEAD", "HEAD", path, "--policy", "fixtures/policy.json", "--policy", "fixtures/policy.json"],
     ["review", dir, "HEAD", "HEAD", path, "--ignore-execution-counts"],
     ["bundle", dir, "HEAD", "HEAD", path, "--format", "json"],

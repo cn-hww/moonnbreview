@@ -101,6 +101,9 @@ Core review types are `Document`, `Policy`, `Gate`, `Comparison`, `Change` and
   Add `focus_changes=true` or CLI `--format markdown --focus-changes` to show
   the first differing region of paired strings with original offsets and lines.
 - `to_html` renders full evidence as an offline, script-free HTML document.
+  `--format html --group-mime` (or `group_mime=true`) organizes addressed output
+  changes by MIME data key. `mime_changes()` exposes the copied groups to callers;
+  see [MIME evidence](docs/mime.md) for exact classification and fallback rules.
 
 Change paths are JSON Pointers **relative to the cell identified by `cell_id`**;
 when `cell_id` is null they are relative to the notebook. Added/removed/type-changed
@@ -174,6 +177,6 @@ This is a complementary review layer over existing notebook models, informed by
 nbdime's workflow. It is not a complete nbdime port, a notebook codec replacement
 or a claim of ecosystem uniqueness. See [research](docs/research.md).
 
-The next coherent capability is structured presentation of rich-output MIME data.
+Further rich-output rendering would require separate validation and isolation.
 Legacy files require a separate, explicit
 identity/ambiguity design. These capabilities are planned, not implemented.

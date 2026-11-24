@@ -147,3 +147,13 @@ limits, Unicode and aggregate output refusal. Totals: 79 core blocks, 85 includi
 the six Git blocks on Wasm/native. CLI checks use the real two-pair fixture and
 temporary missing/malformed files to verify continuation, all exit classes, exact
 configuration/evidence and deterministic report bytes across all four targets.
+
+## MIME evidence groups (2026-11-24)
+
+Six additional core blocks (85 core, 91 with Git) cover exact key/family grouping,
+nested JSON scope, repeated pointer escapes, extension/stream/replacement fallback,
+deep-copy isolation, unchanged default HTML, hostile payloads, opaque keys, exact
+full evidence and grouped replay. The verifier derives two rich-output versions
+from the real fixture, checks text/JSON groups and complete recovered evidence,
+compares grouped HTML bytes across targets and CLIs, and rejects conflicting flags.
+No images, SVG or notebook HTML execute; browser visual QA remains unverified.

@@ -106,7 +106,10 @@ fn HtmlWriter::change(
 /// literal text; no scripts, remote assets, images or notebook HTML are executed.
 /// Full JSON evidence is included. Oversize output raises atomically at 16M
 /// UTF-16 units; no payload is truncated. Report-1's 8M limit also applies.
-pub fn Comparison::to_html(self : Comparison) -> String raise ReviewError {
+pub fn Comparison::to_html(
+  self : Comparison,
+  group_mime~ : Bool = false,
+) -> String raise ReviewError {
   let json = self.to_json()
   let out : HtmlWriter = { buffer: StringBuilder(), size: 0, }
   let header =
@@ -142,6 +145,11 @@ pub fn Comparison::to_html(self : Comparison) -> String raise ReviewError {
   out.write(
     "<p class=note>Change counts are evidence, not a gate verdict. Preserve the gate file and CI result separately.</p>\n",
   )
+  if group_mime {
+    out.write(
+      "<p class=note>MIME-addressed changes are grouped by literal data key. Other evidence stays in its section. All payloads remain literal text.</p>\n",
+    )
+  }
   for
     (title, items) in [
       ("Active changes", active),
@@ -151,8 +159,28 @@ pub fn Comparison::to_html(self : Comparison) -> String raise ReviewError {
     if items.is_empty() {
       out.write("<p>None.</p>\n")
     }
-    for i, change in items {
-      out.change(change, i + 1)
+    let mut ordinal = 1
+    for change in items {
+      if !group_mime || change.mime_key() is None {
+        out.change(change, ordinal)
+        ordinal += 1
+      }
+    }
+    if group_mime {
+      for group in mime_groups(items) {
+        out.write("<section class=mime-group><h3>MIME data key</h3>\n")
+        out.pre(group.key)
+        out.write(
+          "<p class=note>Media category: " +
+          group.category.label() +
+          ". Payload is displayed as data.</p>\n",
+        )
+        for change in group.changes {
+          out.change(change, ordinal)
+          ordinal += 1
+        }
+        out.write("</section>\n")
+      }
     }
     out.write("</section>\n")
   }

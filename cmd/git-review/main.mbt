@@ -10,10 +10,17 @@ async fn main {
     let mut policy_path : String? = None
     let mut format : String? = None
     let mut focus_changes = false
+    let mut group_mime = false
     let mut gate_path : String? = None
     let mut new_path : String? = None
     let mut i = 6
     while i < args.length() {
+      if args[i] == "--group-mime" {
+        guard !group_mime else { fail("--group-mime may occur once") }
+        group_mime = true
+        i += 1
+        continue
+      }
       if args[i] == "--focus-changes" {
         guard !focus_changes else { fail("--focus-changes may occur once") }
         focus_changes = true
@@ -57,6 +64,9 @@ async fn main {
       Some(path) => @review.Policy::from_json(@fs.read_file(path).text())
       None => @review.Policy::new()
     }
+    guard !group_mime || (format == Some("html") && args[1] != "bundle") else {
+      fail("--group-mime requires --format html on review or check")
+    }
     let gate = match gate_path {
       Some(path) => @review.Gate::from_json(@fs.read_file(path).text())
       None => @review.Gate::new()
@@ -73,7 +83,7 @@ async fn main {
     } else if format == Some("markdown") {
       comparison.to_markdown(focus_changes~)
     } else if format == Some("html") {
-      comparison.to_html()
+      comparison.to_html(group_mime~)
     } else {
       comparison.to_json()
     }
