@@ -64,20 +64,24 @@ async fn main {
   let head = git(dir, ["rev-parse", "HEAD"])
   let file_args = ["check", "fixtures/before.ipynb", "fixtures/after.ipynb", "--policy", "fixtures/policy.json"]
   let git_args = ["check", dir, "HEAD~1", "HEAD", path, "--policy", "fixtures/policy.json"]
-  assert_eq(cli(target, "cmd/git", git_args, 1), cli(target, "cmd/main", file_args, 1))
+  assert_eq(cli(target, "cmd/git-review", git_args, 1), cli(target, "cmd/main", file_args, 1))
   let review = git_args.copy()
   review[0] = "review"
-  ignore(cli(target, "cmd/git", review, 0))
+  ignore(cli(target, "cmd/git-review", review, 0))
   for argv in [file_args, git_args] { argv.push("--format"); argv.push("markdown") }
-  assert_eq(cli(target, "cmd/git", git_args, 1), cli(target, "cmd/main", file_args, 1))
-  ignore(cli(target, "cmd/git", ["check", dir, "HEAD", "HEAD", path], 0))
-  let bundle = cli(target, "cmd/git", ["bundle", dir, "HEAD~1", "HEAD", path, "--policy", "fixtures/policy.json"], 0)
+  assert_eq(cli(target, "cmd/git-review", git_args, 1), cli(target, "cmd/main", file_args, 1))
+  ignore(cli(target, "cmd/git-review", ["check", dir, "HEAD", "HEAD", path], 0))
+  let bundle = cli(target, "cmd/git-review", ["bundle", dir, "HEAD~1", "HEAD", path, "--policy", "fixtures/policy.json"], 0)
   let artifacts = @fs.tmpdir(prefix="nbreview-git-artifacts-")
   defer @fs.rmdir(artifacts, recursive=true)
   let bundle_path = artifacts + "/review.json"
   @fs.write_file(bundle_path, bundle)
   let replay = cli(target, "cmd/main", ["replay", bundle_path, "--format", "markdown"], 0)
-  assert_eq(replay, cli(target, "cmd/git", git_args, 1))
+  assert_eq(replay, cli(target, "cmd/git-review", git_args, 1))
+  for argv in [file_args, git_args] { argv.push("--focus-changes") }
+  let focused = cli(target, "cmd/git-review", git_args, 1)
+  assert_eq(focused, cli(target, "cmd/main", file_args, 1))
+  assert_eq(focused, cli(target, "cmd/main", ["replay", bundle_path, "--focus-changes", "--format", "markdown"], 0))
   for argv in [
     ["review", dir, "--help", "HEAD", path],
     ["review", dir, "HEAD", "HEAD", "missing.ipynb"],
@@ -86,7 +90,9 @@ async fn main {
     ["review", dir, "HEAD", "HEAD", path, "--policy", "fixtures/policy.json", "--policy", "fixtures/policy.json"],
     ["review", dir, "HEAD", "HEAD", path, "--ignore-execution-counts"],
     ["bundle", dir, "HEAD", "HEAD", path, "--format", "json"],
-  ] { ignore(cli(target, "cmd/git", argv, 2)) }
+    ["review", dir, "HEAD", "HEAD", path, "--focus-changes"],
+    ["review", dir, "HEAD", "HEAD", path, "--format", "markdown", "--focus-changes", "--focus-changes"],
+  ] { ignore(cli(target, "cmd/git-review", argv, 2)) }
   assert_eq(@fs.read_file(dir + "/" + path).text(), "unstaged invalid notebook")
   assert_eq(@fs.read_file(dir + "/.git/index").binary(), index)
   assert_eq(git(dir, ["status", "--porcelain=v1"]), status)

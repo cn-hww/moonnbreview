@@ -9,8 +9,15 @@ async fn main {
     }
     let mut policy_path : String? = None
     let mut format : String? = None
+    let mut focus_changes = false
     let mut i = 6
     while i < args.length() {
+      if args[i] == "--focus-changes" {
+        guard !focus_changes else { fail("--focus-changes may occur once") }
+        focus_changes = true
+        i += 1
+        continue
+      }
       guard i + 1 < args.length() else { fail("option requires a value") }
       match args[i] {
         "--policy" => {
@@ -30,6 +37,9 @@ async fn main {
     guard args[1] != "bundle" || format is None else {
       fail("bundle has a fixed JSON format; omit --format")
     }
+    guard !focus_changes || (format == Some("markdown") && args[1] != "bundle") else {
+      fail("--focus-changes requires --format markdown on review or check")
+    }
     let policy = match policy_path {
       Some(path) => @review.Policy::from_json(@fs.read_file(path).text())
       None => @review.Policy::new()
@@ -40,7 +50,7 @@ async fn main {
     let text = if args[1] == "bundle" {
       comparison.to_bundle()
     } else if format == Some("markdown") {
-      comparison.to_markdown()
+      comparison.to_markdown(focus_changes~)
     } else {
       comparison.to_json()
     }

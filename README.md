@@ -52,7 +52,7 @@ Compare committed notebooks directly with the optional Git adapter, without
 checkout or index changes:
 
 ```text
-moon run cmd/git -- check . HEAD HEAD fixtures/before.ipynb --policy fixtures/policy.json
+moon run cmd/git-review -- check . HEAD HEAD fixtures/before.ipynb --policy fixtures/policy.json
 ```
 
 Use `review|check|bundle REPO OLD_REF NEW_REF PATH` for your own repository.
@@ -82,6 +82,8 @@ The small public surface consists of `Document`, `Policy`, `compare`,
   deterministic, recomputed replay. There is no trusted report-import verdict.
 - `to_markdown(preview_chars=240)` presents both active and suppressed changes;
   long value previews state exactly how many UTF-16 units were omitted.
+  Add `focus_changes=true` or CLI `--format markdown --focus-changes` to show
+  the first differing region of paired strings with original offsets and lines.
 
 Change paths are JSON Pointers **relative to the cell identified by `cell_id`**;
 when `cell_id` is null they are relative to the notebook. Added/removed/type-changed

@@ -22,6 +22,17 @@ fn console_text(text : String) -> String {
   text.replace_all(old="\r\n", new="\n")
 }
 
+fn late_edit(source : String, ending : String) -> String raise {
+  guard @json.parse(source) is Object(root) && root["cells"] is Array(cells) && cells[0] is Object(first) && first["source"] is Array(lines) else { fail("unexpected Jupyter fixture shape") }
+  let original = StringBuilder()
+  for line in lines {
+    guard line is String(text) else { fail("unexpected source line") }
+    original.write_string(text)
+  }
+  first["source"] = Json("Shared context\n".repeat(200) + original.to_string() + "\n" + ending)
+  Json(root).stringify()
+}
+
 async fn main {
   assert_eq(console_text("a\r\nb\r\nc\r\n"), "a\nb\nc\n")
   assert_eq(console_text("{\"text\":\"a\\r\\nb\\r\\n\"}\r\n"), "{\"text\":\"a\\r\\nb\\r\\n\"}\n")
@@ -38,6 +49,7 @@ async fn main {
   let after = @fs.read_file("fixtures/after.ipynb").text()
   let mut baseline : String? = None
   let mut markdown_baseline : String? = None
+  let mut focused_baseline : String? = None
   for target in targets {
     println(command(["test", "--target", target, "--deny-warn"], 0))
     if target == "wasm" || target == "native" {
@@ -70,6 +82,20 @@ async fn main {
       None => markdown_baseline = Some(markdown)
       Some(value) => { assert_eq(markdown, value) }
     }
+    let focused_args = markdown_args.copy()
+    focused_args.push("--focus-changes")
+    let focused = console_text(command(focused_args, 1))
+    guard focused.contains("first difference") && focused.contains("Preview range:") else { fail("missing focused preview locations") }
+    match focused_baseline {
+      None => focused_baseline = Some(focused)
+      Some(value) => { assert_eq(focused, value) }
+    }
+    let duplicate_focus = focused_args.copy()
+    duplicate_focus.push("--focus-changes")
+    ignore(command(duplicate_focus, 2))
+    let json_focus = policy_args.copy()
+    json_focus.push("--focus-changes")
+    ignore(command(json_focus, 2))
     let invalid_format = policy_args.copy()
     invalid_format.push("--format")
     invalid_format.push("html")
@@ -87,6 +113,19 @@ async fn main {
     let dir = @fs.tmpdir(prefix="moonnbreview-")
     defer @fs.rmdir(dir, recursive=true)
     let path = dir + "/review.json"
+    let late_before = dir + "/late-before.ipynb"
+    let late_after = dir + "/late-after.ipynb"
+    @fs.write_file(late_before, late_edit(before, "LATE_EDIT_OLD"))
+    @fs.write_file(late_after, late_edit(before, "LATE_EDIT_NEW"))
+    let late_args = prefix.copy()
+    for arg in ["check", late_before, late_after, "--format", "markdown"] { late_args.push(arg) }
+    let late_plain = console_text(command(late_args, 1))
+    assert_false(late_plain.contains("LATE_EDIT_NEW"))
+    late_args.push("--focus-changes")
+    let late_focused = console_text(command(late_args, 1))
+    assert_true(late_focused.contains("LATE_EDIT_OLD"))
+    assert_true(late_focused.contains("LATE_EDIT_NEW"))
+    assert_true(late_focused.contains("units before and 0 after"))
     @fs.write_file(path, bundle)
     let replay = prefix.copy()
     replay.push("replay")
@@ -96,6 +135,12 @@ async fn main {
     markdown_replay.push("--format")
     markdown_replay.push("markdown")
     assert_eq(console_text(command(markdown_replay, 0)), markdown)
+    let focused_replay = replay.copy()
+    for arg in ["--focus-changes", "--format", "markdown"] { focused_replay.push(arg) }
+    assert_eq(console_text(command(focused_replay, 0)), focused)
+    let invalid_focus_replay = replay.copy()
+    invalid_focus_replay.push("--focus-changes")
+    ignore(command(invalid_focus_replay, 2))
     let invalid_bundle = bundle_args.copy()
     invalid_bundle.push("--format")
     invalid_bundle.push("markdown")

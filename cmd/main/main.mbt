@@ -34,12 +34,32 @@ fn main {
     }
     let command = args[1]
     let mut format = "json"
+    let mut focus_changes = false
     let comparison = if command == "replay" {
-      guard args.length() == 3 || (args.length() == 5 && args[3] == "--format") else {
-        fail("usage: replay BUNDLE.json [--format json|markdown]")
+      guard args.length() >= 3 else {
+        fail(
+          "usage: replay BUNDLE.json [--format json|markdown] [--focus-changes]",
+        )
       }
-      if args.length() == 5 {
-        format = output_format(args[4])
+      let mut explicit_format = false
+      let mut i = 3
+      while i < args.length() {
+        match args[i] {
+          "--focus-changes" => {
+            guard !focus_changes else { fail("--focus-changes may occur once") }
+            focus_changes = true
+          }
+          "--format" => {
+            guard !explicit_format && i + 1 < args.length() else {
+              fail("--format requires one value and may occur once")
+            }
+            explicit_format = true
+            i += 1
+            format = output_format(args[i])
+          }
+          _ => fail("unknown replay argument: " + args[i])
+        }
+        i += 1
       }
       @review.Comparison::from_bundle(read(args[2]))
     } else {
@@ -55,6 +75,10 @@ fn main {
       let mut i = 4
       while i < args.length() {
         match args[i] {
+          "--focus-changes" => {
+            guard !focus_changes else { fail("--focus-changes may occur once") }
+            focus_changes = true
+          }
           "--format" => {
             guard !explicit_format && i + 1 < args.length() else {
               fail("--format requires one value and may occur once")
@@ -108,10 +132,15 @@ fn main {
         policy~,
       )
     }
+    guard !focus_changes || (format == "markdown" && command != "bundle") else {
+      fail(
+        "--focus-changes requires --format markdown on review, check or replay",
+      )
+    }
     let text = if command == "bundle" {
       comparison.to_bundle()
     } else if format == "markdown" {
-      comparison.to_markdown()
+      comparison.to_markdown(focus_changes~)
     } else {
       comparison.to_json()
     }

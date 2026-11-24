@@ -2,21 +2,21 @@
 
 The Git adapter reads the same repository-root-relative path at two commit-ish
 references. It never checks out a branch or uses working-tree/index notebook data.
-Use a complete checkout and Git on PATH. This optional adapter and `cmd/git` run
+Use a complete checkout and Git on PATH. This optional adapter and `cmd/git-review` run
 on **Wasm and native**; the core library and file CLI still support all four targets.
 
 From this project's checkout, a runnable comparison with no private infrastructure:
 
 ```text
-moon run cmd/git -- check . HEAD HEAD fixtures/before.ipynb --policy fixtures/policy.json
-moon run cmd/git -- review . HEAD HEAD fixtures/before.ipynb --format markdown
+moon run cmd/git-review -- check . HEAD HEAD fixtures/before.ipynb --policy fixtures/policy.json
+moon run cmd/git-review -- review . HEAD HEAD fixtures/before.ipynb --format markdown
 ```
 
 Both succeed with zero changes. For an analysis repository with two revisions:
 
 ```text
-moon run cmd/git -- check /path/to/analysis BASE_COMMIT HEAD notebooks/analysis.ipynb --policy fixtures/policy.json --format markdown
-moon run cmd/git -- bundle /path/to/analysis BASE_COMMIT HEAD notebooks/analysis.ipynb --policy fixtures/policy.json
+moon run cmd/git-review -- check /path/to/analysis BASE_COMMIT HEAD notebooks/analysis.ipynb --policy fixtures/policy.json --format markdown
+moon run cmd/git-review -- bundle /path/to/analysis BASE_COMMIT HEAD notebooks/analysis.ipynb --policy fixtures/policy.json
 ```
 
 `review` and `bundle` exit 0 on valid results; `check` exits 0/1 for pass/active
@@ -82,3 +82,8 @@ and Markdown (3 active/2 suppressed), exercises bundle replay and exits 0/1/2,
 and verifies unchanged HEAD, index bytes and notebook worktree. Its fixture commits
 are temporary test data, not project history. The main verifier runs this workflow
 on both supported Git adapter targets, and CI repeats it on all three OSes.
+
+The executable package is named `cmd/git-review` so its Windows executable is
+`git-review.exe`. Naming it `git.exe` would shadow the real Git during child
+process lookup. See Microsoft's [CreateProcess search order](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw).
+The native end-to-end workflow is required in CI to guard this integration.

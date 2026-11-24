@@ -66,6 +66,8 @@ fn MarkdownWriter::value(
   self : MarkdownWriter,
   value : Json?,
   preview_chars : Int32,
+  start : Int32,
+  focused : Bool,
 ) -> Unit raise ReviewError {
   guard value is Some(value) else {
     self.write("Absent.\n\n")
@@ -75,15 +77,46 @@ fn MarkdownWriter::value(
     String(s) => (s, "text")
     _ => (canonical(value), "json")
   }
-  let mut end = preview_chars.min(text.length())
+  let mut end = (start + preview_chars).min(text.length())
   if end < text.length() && end > 0 {
     let unit = text[end - 1].to_int()
     if unit >= 0xD800 && unit <= 0xDBFF {
       end -= 1
     }
   }
-  self.block(text[:end].to_owned(), language)
-  if end < text.length() {
+  if focused {
+    let mut line = 1
+    let mut column = 1
+    for i in 0..<start {
+      if text[i].to_int() == 10 {
+        line += 1
+        column = 1
+      } else {
+        column += 1
+      }
+    }
+    self.write(
+      "Preview range: UTF-16 [" +
+      start.to_string() +
+      ", " +
+      end.to_string() +
+      "); starts at line " +
+      line.to_string() +
+      ", column " +
+      column.to_string() +
+      " (1-based UTF-16).\n\n",
+    )
+  }
+  self.block(text[start:end].to_owned(), language)
+  if focused && (start > 0 || end < text.length()) {
+    self.write(
+      "Preview omitted " +
+      start.to_string() +
+      " UTF-16 units before and " +
+      (text.length() - end).to_string() +
+      " after; use JSON for full evidence.\n\n",
+    )
+  } else if end < text.length() {
     self.write(
       "Preview omitted " +
       (text.length() - end).to_string() +
@@ -93,11 +126,35 @@ fn MarkdownWriter::value(
 }
 
 ///|
+// Focus on the first differing scalar in a string pair, retaining a quarter
+// window of shared context. Both windows start at the same safe boundary.
+fn preview_start(before : String, after : String, budget : Int32) -> Int32 {
+  let limit = before.length().min(after.length())
+  let mut prefix = 0
+  while prefix < limit && before[prefix] == after[prefix] {
+    prefix += 1
+  }
+  if prefix > 0 &&
+    before[prefix - 1].to_int() >= 0xD800 &&
+    before[prefix - 1].to_int() <= 0xDBFF {
+    prefix -= 1
+  }
+  let mut start = (prefix - budget / 4).max(0)
+  if start > 0 &&
+    before[start - 1].to_int() >= 0xD800 &&
+    before[start - 1].to_int() <= 0xDBFF {
+    start -= 1
+  }
+  start
+}
+
+///|
 fn MarkdownWriter::change(
   self : MarkdownWriter,
   change : Change,
   number : Int32,
   preview_chars : Int32,
+  focus_changes : Bool,
 ) -> Unit raise ReviewError {
   self.write("### " + number.to_string() + ". " + change.kind.label() + "\n\n")
   self.block(
@@ -110,10 +167,15 @@ fn MarkdownWriter::change(
     }),
     "json",
   )
+  let (start, focused) = match (change.before, change.after) {
+    (Some(String(a)), Some(String(b))) if focus_changes =>
+      (preview_start(a, b, preview_chars), true)
+    _ => (0, false)
+  }
   self.write("Before:\n\n")
-  self.value(change.before, preview_chars)
+  self.value(change.before, preview_chars, start, focused)
   self.write("After:\n\n")
-  self.value(change.after, preview_chars)
+  self.value(change.after, preview_chars, start, focused)
 }
 
 ///|
@@ -121,9 +183,13 @@ fn MarkdownWriter::change(
 /// Preview size is 32..4096 UTF-16 units per before/after representation; a
 /// surrogate pair is never split. The complete report is limited to 1000000
 /// units, raising rather than returning partial Markdown. JSON/bundles are unchanged.
+/// Set focus_changes=true to center paired string previews near their first
+/// difference, with exact original offsets and LF-based line/UTF-16 columns.
+/// This is a bounded first-difference view, not an exhaustive text diff.
 pub fn Comparison::to_markdown(
   self : Comparison,
   preview_chars~ : Int32 = 240,
+  focus_changes~ : Bool = false,
 ) -> String raise ReviewError {
   guard preview_chars >= 32 && preview_chars <= 4096 else {
     raise Invalid("preview_chars must be 32..4096; use JSON for full evidence")
@@ -138,6 +204,11 @@ pub fn Comparison::to_markdown(
     suppressed.length().to_string() +
     "\n\n",
   )
+  if focus_changes {
+    out.write(
+      "Paired string previews focus on the first difference; later edits may be omitted. Other values use prefix previews.\n\n",
+    )
+  }
   out.write(
     "Values below are bounded previews. Full evidence is available in the JSON report or replay bundle.\n\n",
   )
@@ -151,7 +222,7 @@ pub fn Comparison::to_markdown(
       out.write("None.\n\n")
     }
     for i, change in items {
-      out.change(change, i + 1, preview_chars)
+      out.change(change, i + 1, preview_chars, focus_changes)
     }
   }
   out.buffer.to_string()

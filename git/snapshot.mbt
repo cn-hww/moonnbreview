@@ -59,7 +59,16 @@ async fn git(repository : String, args : Array[String], limit : Int32) -> Bytes 
     "GIT_NO_LAZY_FETCH": "1",
   }).output(timeout_ms=30000, max_output_bytes=limit)
   guard result.exit_code() == 0 else {
-    fail("Git " + args[0] + " failed: " + result.stderr())
+    fail(
+      "Git " +
+      args[0] +
+      " exited " +
+      result.exit_code().to_string() +
+      "; stderr: " +
+      result.stderr() +
+      "; stdout: " +
+      result.stdout(),
+    )
   }
   result.stdout_bytes()
 }

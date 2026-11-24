@@ -49,3 +49,40 @@ Reports still contain potentially sensitive source and metadata.
 
 This is a textual review renderer, not an image pixel comparison, notebook runner,
 browser UI or approval mechanism. No external renderer or fixture is incorporated.
+
+## Focus on changes in long cells
+
+Prefix previews can look identical when a source edit occurs late in a long cell.
+Opt into a bounded view around the **first differing character**:
+
+```text
+moon run cmd/main -- check fixtures/before.ipynb fixtures/after.ipynb --policy fixtures/policy.json --format markdown --focus-changes
+moon run cmd/main -- replay saved-bundle.json --format markdown --focus-changes
+moon run cmd/git-review -- review . HEAD HEAD fixtures/before.ipynb --format markdown --focus-changes
+```
+
+The corresponding library call is
+`comparison.to_markdown(preview_chars=240, focus_changes=true)`. Default output
+remains byte-for-byte compatible with prefix mode. The flag requires Markdown,
+may occur once, and cannot be used for JSON or bundle output. Exit/gate semantics,
+suppression policy, complete JSON and replay bundles are unchanged.
+
+For a before/after **string pair**, focus mode scans their common prefix and
+reserves approximately one quarter of the preview budget for shared context
+before the first difference. Both windows start at the same original offset;
+surrogate boundaries may shift that offset by one unit. Each side states its
+half-open original UTF-16 range `[start, end)`, 1-based LF-delimited line and
+1-based UTF-16 column, plus exact units omitted before and after the window.
+Coordinates are computed before visible control escaping. A character above
+U+FFFF occupies two column units. CR is visible data; LF advances the line.
+
+This is **not an exhaustive text diff**: long replacements and later separated
+edits may be outside the window. The report states this explicitly. Nonstring
+values, additions and removals keep their existing prefix/absence presentation;
+suppressed string pairs can also be focused without changing the gate verdict.
+All existing preview/report limits, fences and control escaping still apply.
+
+The main verifier derives a long-source case from the real Jupyter fixture by
+adding labeled shared context and two different trailing edit markers. It proves
+the ordinary preview omits those markers while focus mode shows both, on all four
+targets. These synthetic edits are test data, not changes to the upstream fixture.

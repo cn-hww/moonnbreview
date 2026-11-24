@@ -88,3 +88,21 @@ attributes only inside those newly allocated temporary fixtures.
 Local verification uses Windows for portable execution and Ubuntu 22.04/WSL for
 actual native execution, with the same pinned toolchain above. Remote CI results
 must still be checked against the final pushed hash.
+
+## Focused Markdown and Windows executable naming (2026-11-24)
+
+Eight additional core test blocks cover opt-in compatibility, evidence/replay
+invariance, late edits, exact two-sided omissions, multiline/control coordinates,
+append/delete/empty sides, both surrogate boundaries, separated edits, fencing,
+nonstring fallback and suppressed-string verdicts. Totals are now 58 core blocks
+on all four targets and 5 additional Git blocks on Wasm/native (63 total there).
+The verifier exercises focus mode through both CLIs and replay, compares its
+bytes across backends, rejects conflicting flags, and demonstrates a late edit
+in a long-source variant of the real fixture. Original fixtures are unchanged.
+
+The first Git push's [CI run](https://github.com/cn-hww/moonnbreview/actions/runs/45311134623)
+passed Linux/macOS and all Windows library tests, but failed the Windows native
+CLI integration. Its executable was `git.exe`, shadowing the real Git when the
+adapter launched a child process. The package is renamed to `cmd/git-review`;
+Git process diagnostics now include exit code, stderr and stdout. Local Windows
+native execution still requires MSVC; the native CI workflow verifies this fix.
