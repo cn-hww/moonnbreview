@@ -52,6 +52,13 @@ async fn main {
   let args = @env.args()
   guard args.length() == 2 && ["wasm", "native"].contains(args[1]) else { fail("usage: verify-git.mbtx wasm|native") }
   let target = args[1]
+  for (entry, version) in [("cmd/git-review", "moonnbreview-git"), ("cmd/git-batch", "moonnbreview-git-batch")] {
+    let help = cli(target, entry, ["--help"], 0)
+    assert_true(help.contains("Exit:") && help.contains("0.1.0"))
+    assert_eq(cli(target, entry, ["-h"], 0), help)
+    assert_eq(cli(target, entry, ["--version"], 0), version + " 0.1.0\n")
+    ignore(cli(target, entry, ["--version", "extra"], 2))
+  }
   let dir = @fs.tmpdir(prefix="nbreview-git-e2e-")
   defer cleanup(dir)
   ignore(git(dir, ["init", "--quiet"]))

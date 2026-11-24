@@ -42,6 +42,26 @@ fn render(
 fn main {
   try {
     let args = arguments()
+    if args.length() == 2 && ["--help", "-h"].contains(args[1]) {
+      println(
+        (
+          #|MoonNBReview 0.1.0 — notebook file batch
+          #|review|check|bundle MANIFEST [--policy FILE]
+          #|replay BATCH_BUNDLE [--format json|junit|markdown]
+          #|review/check: --format json|junit|markdown
+          #|check/bundle only: --gate FILE (blocking categories)
+          #|--focus-changes requires Markdown and may occur once.
+          #|Bundles have fixed JSON format. Replay accepts no policy/gate override.
+          #|Exit: check/replay 0 passed / 1 blocked / 2 errors; review/bundle 0 valid / 2 errors.
+          #|Every pair is retained, including failures. See docs/cli.md.
+        ),
+      )
+      return
+    }
+    if args.length() == 2 && args[1] == "--version" {
+      println("moonnbreview-batch 0.1.0")
+      return
+    }
     guard args.length() >= 3 &&
       ["review", "check", "bundle", "replay"].contains(args[1]) else {
       fail(

@@ -1,0 +1,121 @@
+----
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn command(cwd : String, program : String, args : Array[String], expected~ : Int = 0) -> String {
+  let result = @shell.Cmd(program, args, cwd~).output(timeout_ms=300000, max_output_bytes=16000000)
+  guard result.exit_code() == expected else {
+    println(result.stdout()); println(result.stderr())
+    fail("consumer command failed: " + program + " " + args.join(" "))
+  }
+  result.stdout().replace_all(old="\r\n", new="\n")
+}
+
+async fn main {
+  let args = @env.args()
+  guard args.length() == 1 || args == [args[0], "--portable"] || args == [args[0], "--native"] else { fail("usage: verify-consumer.mbtx [--portable|--native]") }
+  let targets = if args.length() == 1 { ["wasm", "wasm-gc", "js", "native"] } else if args[1] == "--portable" { ["wasm", "wasm-gc", "js"] } else { ["native"] }
+  let repo = @fs.realpath(".").replace_all(old="\\", new="/")
+  let dir = @fs.tmpdir(prefix="nbreview-consumer-")
+  defer @fs.rmdir(dir, recursive=true)
+  let consumer = dir + "/consumer"
+  @fs.mkdir(consumer)
+  @fs.write_file(consumer + "/moon.mod",
+    (
+    #|name = "local/notebook-consumer"
+    #|version = "0.0.0"
+    #|import { "cn-hww/moonnbreview@0.1.0" }
+    )
+  )
+  @fs.write_file(consumer + "/moon.pkg",
+    (
+    #|import {
+    #|  "cn-hww/moonnbreview" @review,
+    #|  "cn-hww/moonnbreview/junit",
+    #|  "moonbitlang/core/json",
+    #|} for "test"
+    )
+  )
+  let before = @fs.read_file(repo + "/fixtures/before.ipynb").text()
+  let after = @fs.read_file(repo + "/fixtures/after.ipynb").text()
+  let policy = @fs.read_file(repo + "/fixtures/policy.json").text()
+  let source = "let before = " + Json(before).stringify() + "\n///|\nlet after = " + Json(after).stringify() + "\n///|\nlet policy = " + Json(policy).stringify() + "\n"
+  let consumer_case =
+    #|///|
+    #|test "external consumer uses public review archive and CI APIs" {
+    #|  let p = @review.Policy::from_json(policy)
+    #|  let c = @review.compare(@review.Document::parse(before), @review.Document::parse(after), policy=p)
+    #|  assert_eq(c.changes().length(), 3)
+    #|  assert_eq(c.suppressed().length(), 2)
+    #|  assert_false(c.passes())
+    #|  assert_eq(@review.Comparison::from_bundle(c.to_bundle()).to_json(), c.to_json())
+    #|  let m = @review.Manifest::new([{id:"lesson",old_path:"lesson.ipynb",new_path:"lesson.ipynb"}])
+    #|  let b = m.review_sides(_ => before, _ => after, policy=p, retain_inputs=true)
+    #|  assert_eq(b.exit_code(), 1)
+    #|  assert_eq(@review.BatchReview::from_bundle(b.to_bundle()).to_json(), b.to_json())
+    #|  assert_true(b.to_markdown().contains("## Notebook 1: blocked"))
+    #|  assert_true(@junit.render(b).contains("NotebookGateBlocked"))
+    #|  guard @json.parse(b.to_json()) is Object(root) && root["results"] is Array(entries) && entries[0] is Object(entry) else { abort("missing public evidence") }
+    #|  assert_eq(entry["report"], @json.parse(c.to_json()))
+    #|}
+  @fs.write_file(consumer + "/consumer_test.mbt", source + consumer_case)
+  @fs.mkdir(consumer + "/git-demo")
+  @fs.write_file(consumer + "/git-demo/moon.pkg",
+    (
+    #|import {
+    #|  "cn-hww/moonnbreview" @review,
+    #|  "cn-hww/moonnbreview/git" @snapshots,
+    #|  "moonbitlang/core/env",
+    #|}
+    #|supported_targets = "wasm+native"
+    #|pkgtype(kind: "executable")
+    )
+  )
+  @fs.write_file(consumer + "/git-demo/main.mbt",
+    (
+    #|async fn main {
+    #|  let args = @env.args()
+    #|  let snapshot = @snapshots.Snapshot::load(args[1], args[2], "fixtures/before.ipynb")
+    #|  assert_eq(snapshot.commit(), args[2])
+    #|  assert_true(@review.compare(snapshot.document(), snapshot.document()).passes())
+    #|  let revisions = @snapshots.Revisions::resolve(args[1], args[2], args[2])
+    #|  let m = @review.Manifest::new([{id:"lesson",old_path:"fixtures/before.ipynb",new_path:"fixtures/before.ipynb"}])
+    #|  assert_eq(revisions.review(m).exit_code(), 0)
+    #|  println("External Git consumer passed")
+    #|}
+    )
+  )
+  ignore(command(dir, "moon", ["work", "init", repo, consumer]))
+  let head = command(repo, "git", ["rev-parse", "HEAD"]).trim().to_owned()
+  for target in targets {
+    println(command(consumer, "moon", ["test", ".", "--target", target, "--deny-warn"]))
+    if target == "wasm" || target == "native" {
+      assert_true(command(consumer, "moon", ["run", "git-demo", "--target", target, "--deny-warn", "--", repo, head]).contains("External Git consumer passed"))
+    }
+  }
+  if targets.contains("native") {
+    let bin = dir + "/bin"
+    @fs.mkdir(bin)
+    println(command(repo, "moon", ["install", "./cmd/...", "--bin", bin]))
+    let ext = if @env.get_env_var("OS") == Some("Windows_NT") { ".exe" } else { "" }
+    for (name, version) in [("main", "moonnbreview"), ("batch", "moonnbreview-batch"), ("git-review", "moonnbreview-git"), ("git-batch", "moonnbreview-git-batch")] {
+      let executable = bin + "/" + name + ext
+      assert_true(command(dir, executable, ["--help"]).contains("Exit:"))
+      assert_eq(command(dir, executable, ["--version"]), version + " 0.1.0\n")
+    }
+    ignore(command(dir, bin + "/main" + ext, ["check", repo + "/fixtures/before.ipynb", repo + "/fixtures/before.ipynb"]))
+    let result = command(dir, bin + "/main" + ext, ["check", repo + "/fixtures/before.ipynb", repo + "/fixtures/after.ipynb", "--policy", repo + "/fixtures/policy.json"], expected=1)
+    guard @json.parse(result) is Object(report) && report["changes"] is Array(changes) else { fail("installed CLI lost evidence") }
+    assert_eq(changes.length(), 3)
+    println("Installed all four native commands and executed them outside the source checkout.")
+  }
+  assert_eq(@fs.read_file(repo + "/fixtures/before.ipynb").text(), before)
+  assert_eq(@fs.read_file(repo + "/fixtures/after.ipynb").text(), after)
+  println("External consumer workflow passed on " + targets.join(", "))
+}

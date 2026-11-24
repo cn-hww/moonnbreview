@@ -221,3 +221,15 @@ recovery. An XML-illegal manifest ID forces a renderer error: JSON/bundle/Markdo
 remain usable, XML is absent, a named diagnostic is saved and overall exit becomes
 2 while the original gate remains 1. Existing library test counts are unchanged.
 This workflow does not publish packages or treat artifacts as signed approval.
+
+## External consumption and native installation (2026-11-24)
+
+`verify-consumer.mbtx` creates a separate temporary module and workspace outside
+this checkout. Its public-only test executes comparison, exact complete evidence,
+suppression, retained replay, same-path two-source batch, Markdown and JUnit on all
+four targets. A Git consumer executes Snapshot/Revisions APIs on Wasm/native.
+Native mode installs all four binaries using the current Moon installer, then
+executes each help/version and real-data 0/1 checks from an unrelated working
+directory. No global installation paths or user workspace files are changed.
+All four source entries now provide help/version, with portable end-to-end checks
+for correct exit/flag handling. Full verification includes the isolated consumer.

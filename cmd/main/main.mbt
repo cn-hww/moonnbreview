@@ -27,6 +27,28 @@ fn output_format(text : String) -> String raise {
 fn main {
   try {
     let args = arguments()
+    if args.length() == 2 && ["--help", "-h"].contains(args[1]) {
+      println(
+        (
+          #|MoonNBReview 0.1.0 — notebook file review
+          #|review|check|bundle OLD NEW [--policy FILE]
+          #|replay BUNDLE [--format json|markdown|html]
+          #|review/check: --format json|markdown|html
+          #|check only: --gate FILE (blocking categories)
+          #|Inline policy: --ignore-execution-counts; --ignore-metadata KEY (repeatable)
+          #|--policy cannot be mixed with inline policy flags.
+          #|--focus-changes requires Markdown; --group-mime requires HTML (each once).
+          #|Bundles have fixed JSON format. Replay accepts no policy/gate override.
+          #|Exit: check 0 passed / 1 blocked / 2 invalid; review/bundle/replay 0 valid / 2 invalid.
+          #|Reports go to stdout; inputs are never rewritten. See docs/cli.md.
+        ),
+      )
+      return
+    }
+    if args.length() == 2 && args[1] == "--version" {
+      println("moonnbreview 0.1.0")
+      return
+    }
     guard args.length() >= 2 else {
       fail(
         "usage: review|check OLD NEW [--policy FILE] [--format json|markdown|html] | check ... --gate FILE | bundle OLD NEW [--policy FILE] | replay BUNDLE [--format json|markdown|html]",

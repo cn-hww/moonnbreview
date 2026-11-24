@@ -75,7 +75,7 @@ async fn main {
   let args = @env.args()
   guard args.length() == 1 || args == [args[0], "--portable"] || args == [args[0], "--native"] else { fail("usage: verify.mbtx [--portable|--native]") }
   let targets = if args.length() == 2 && args[1] == "--portable" { ["wasm", "wasm-gc", "js"] } else if args.length() == 2 { ["native"] } else { ["wasm", "wasm-gc", "js", "native"] }
-  for path in ["scripts/verify.mbtx", "scripts/prepare-fixture.mbtx", "scripts/verify-git.mbtx", "scripts/ci-review.mbtx"] {
+  for path in ["scripts/verify.mbtx", "scripts/prepare-fixture.mbtx", "scripts/verify-git.mbtx", "scripts/ci-review.mbtx", "scripts/verify-consumer.mbtx"] {
     ignore(command(["fmt", path], 0))
   }
   for args in [["fmt"], ["info"], ["check", "--target", "all", "--deny-warn"]] {
@@ -93,6 +93,18 @@ async fn main {
   let mut batch_markdown_baseline : String? = None
   for target in targets {
     println(command(["test", "--target", target, "--deny-warn"], 0))
+    for (entry, version) in [("cmd/main", "moonnbreview"), ("cmd/batch", "moonnbreview-batch")] {
+      let prefix = ["run", "--target", target, entry, "--"]
+      let help_args = prefix.copy(); help_args.push("--help")
+      let help = console_text(command(help_args, 0))
+      assert_true(help.contains("0.1.0") && help.contains("Exit:"))
+      help_args[5] = "-h"
+      assert_eq(console_text(command(help_args, 0)), help)
+      help_args[5] = "--version"
+      assert_eq(console_text(command(help_args, 0)), version + " 0.1.0\n")
+      help_args.push("extra")
+      ignore(command(help_args, 2))
+    }
     if target == "wasm" || target == "native" {
       println(command(["run", "--deny-warn", "scripts/verify-git.mbtx", target], 0))
     }
@@ -365,5 +377,8 @@ async fn main {
   }
   assert_eq(@fs.read_file("fixtures/before.ipynb").text(), before)
   assert_eq(@fs.read_file("fixtures/after.ipynb").text(), after)
+  let consumer_args = ["run", "--deny-warn", "scripts/verify-consumer.mbtx"]
+  if args.length() == 2 { consumer_args.push(args[1]) }
+  println(command(consumer_args, 0))
   println("Verification passed on " + targets.join(", ") + "; source fixtures unchanged.")
 }

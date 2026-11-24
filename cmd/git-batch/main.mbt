@@ -2,6 +2,26 @@
 async fn main {
   try {
     let args = @env.args()
+    if args.length() == 2 && ["--help", "-h"].contains(args[1]) {
+      println(
+        (
+          #|MoonNBReview 0.1.0 — committed notebook batch (Wasm/native)
+          #|review|check|bundle REPO OLD_REF NEW_REF MANIFEST [--policy FILE]
+          #|check/bundle only: --gate FILE
+          #|review/check: --format json|junit|markdown
+          #|--focus-changes requires Markdown and may occur once.
+          #|Bundles have fixed JSON format; replay them with the file batch command.
+          #|Both refs are pinned before serial pair loading. No checkout or rename inference.
+          #|Exit: check 0 passed / 1 blocked / 2 errors; review/bundle 0 valid / 2 errors.
+          #|Git must be on PATH. See docs/cli.md.
+        ),
+      )
+      return
+    }
+    if args.length() == 2 && args[1] == "--version" {
+      println("moonnbreview-git-batch 0.1.0")
+      return
+    }
     guard args.length() >= 6 && ["review", "check", "bundle"].contains(args[1]) else {
       fail(
         "usage: review|check|bundle REPO OLD_REF NEW_REF MANIFEST [--policy FILE] [--gate FILE] [--format json|junit|markdown] [--focus-changes]",

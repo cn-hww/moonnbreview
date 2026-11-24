@@ -15,6 +15,8 @@ Mooncakes**. The implemented scope below is the contract of this release.
 Use MoonBit `0.10.22+124d61d05`, Node.js 22 for JS, and a C compiler for native
 (an MSVC developer environment on Windows).
 The CLI also executes with `moonrun` on Wasm and Wasm-GC.
+See [installation and downstream use](docs/install.md) for native executables and
+source-workspace integration, or `moon run cmd/main -- --help` for command usage.
 
 ```text
 git clone https://github.com/cn-hww/moonnbreview.git
@@ -97,8 +99,7 @@ a `moon.work` listing this module and the consuming module. See the compiled
 
 Core review types are `Document`, `Policy`, `Gate`, `Comparison`, `Change` and
 `ChangeKind`, with `compare` as the entry point. `ReviewPair`, `Manifest` and
-`BatchReview` provide the explicit multi-file workflow:
-
+`BatchReview` provide the explicit multi-file workflow.
 `Manifest::review_sides` accepts independent baseline and proposed loaders, so the
 same path can refer to different revisions without temporary filename rewriting.
 See the [batch API workflow](docs/batch.md) and compiled public example.
