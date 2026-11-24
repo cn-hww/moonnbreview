@@ -5,5 +5,6 @@ import {
 
 import {
   "cn-hww/moonnbreview" @review,
+  "moonbitlang/async",
   "moonbitlang/core/json",
 } for "test"

@@ -85,6 +85,13 @@ pub async fn Snapshot::load(
   path : String,
 ) -> Snapshot {
   validate_path(path)
+  let commit = resolve_commit(repository, revision)
+  let doc = @review.Document::parse(load_text(repository, commit, path))
+  { commit_id: commit, file_path: path, doc, }
+}
+
+///|
+async fn resolve_commit(repository : String, revision : String) -> String {
   guard !revision.is_empty() &&
     revision.length() <= 1024 &&
     revision.iter().all(c => c.to_int() >= 32 && c.to_int() != 127) else {
@@ -102,6 +109,16 @@ pub async fn Snapshot::load(
   guard object_id(commit) else {
     fail("Git did not resolve exactly one commit")
   }
+  commit
+}
+
+///|
+async fn load_text(
+  repository : String,
+  commit : String,
+  path : String,
+) -> String {
+  validate_path(path)
   let entry = @utf8.decode(
     git(repository, ["ls-tree", "--full-tree", "-z", commit, "--", path], 65536),
   )
@@ -121,6 +138,5 @@ pub async fn Snapshot::load(
     )
   }
   let bytes = git(repository, ["cat-file", "blob", parts[2]], 6000000)
-  let doc = @review.Document::parse(@utf8.decode(bytes))
-  { commit_id: commit, file_path: path, doc, }
+  @utf8.decode(bytes)
 }

@@ -4,6 +4,7 @@ import {
   "moonbitlang/async@0.22.4/shell",
   "moonbitlang/async@0.22.4/fs",
   "moonbitlang/core/env",
+  "moonbitlang/core/json",
 }
 ----
 
@@ -79,6 +80,43 @@ async fn main {
   let artifacts = @fs.tmpdir(prefix="nbreview-git-artifacts-")
   defer @fs.rmdir(artifacts, recursive=true)
   let bundle_path = artifacts + "/review.json"
+  let manifest_path = artifacts + "/manifest.json"
+  let manifest : Json = {"format":"moonnbreview/manifest-1", "pairs":[
+    {"id":"first", "old":Json(path), "new":Json(path)},
+    {"id":"second", "old":Json(path), "new":Json(path)}
+  ]}
+  @fs.write_file(manifest_path, manifest.stringify())
+  let batch_args = ["check", dir, "HEAD~1", "HEAD", manifest_path, "--policy", "fixtures/policy.json"]
+  let batch = cli(target, "cmd/git-batch", batch_args, 1)
+  guard @json.parse(batch) is Object(batch_fields) && batch_fields["results"] is Array(entries) && entries.length() == 2 else { fail("missing Git batch evidence") }
+  let single = @json.parse(cli(target, "cmd/main", ["check", "fixtures/before.ipynb", "fixtures/after.ipynb", "--policy", "fixtures/policy.json"], 1))
+  for entry in entries {
+    guard entry is Object(fields) else { fail("invalid batch entry") }
+    assert_eq(fields["report"], single)
+  }
+  let batch_bundle = batch_args.copy()
+  batch_bundle[0] = "bundle"
+  @fs.write_file(bundle_path, cli(target, "cmd/git-batch", batch_bundle, 0))
+  assert_eq(cli(target, "cmd/batch", ["replay", bundle_path], 1), batch)
+  let batch_junit = batch_args.copy()
+  batch_junit.push("--format"); batch_junit.push("junit")
+  assert_eq(cli(target, "cmd/git-batch", batch_junit, 1), cli(target, "cmd/batch", ["replay", bundle_path, "--format", "junit"], 1))
+  ignore(cli(target, "cmd/git-batch", ["check", dir, "HEAD", "HEAD", manifest_path], 0))
+  let failed_manifest : Json = {"format":"moonnbreview/manifest-1", "pairs":[
+    {"id":"missing", "old":"missing.ipynb", "new":Json(path)},
+    {"id":"later", "old":Json(path), "new":Json(path)}
+  ]}
+  @fs.write_file(manifest_path, failed_manifest.stringify())
+  let failed = cli(target, "cmd/git-batch", batch_args, 2)
+  assert_true(failed.contains("read_old") && failed.contains("\"status\":\"blocked\""))
+  for extra in [["--format", "pdf"], ["--format", "json", "--format", "junit"], ["--policy"], ["--unknown", "x"]] {
+    let bad = batch_args.copy()
+    for arg in extra { bad.push(arg) }
+    ignore(cli(target, "cmd/git-batch", bad, 2))
+  }
+  let bad_bundle = batch_bundle.copy()
+  bad_bundle.push("--format"); bad_bundle.push("json")
+  ignore(cli(target, "cmd/git-batch", bad_bundle, 2))
   @fs.write_file(bundle_path, bundle)
   let replay = cli(target, "cmd/main", ["replay", bundle_path, "--format", "markdown"], 0)
   assert_eq(replay, cli(target, "cmd/git-review", git_args, 1))

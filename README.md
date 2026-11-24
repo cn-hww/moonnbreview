@@ -78,6 +78,10 @@ Add `--format junit` to batch review/check/replay for
 [per-Notebook CI test results](docs/junit.md), preserving complete evidence and
 the original gate/error exit semantics.
 
+`moon run cmd/git-batch -- check . HEAD HEAD fixtures/manifest.json` reviews an
+entire explicit manifest directly from pinned Git revisions, including separate
+old/new paths. See [Git batch review](docs/git-batch.md) for library APIs and replay.
+
 ## Use the library
 
 Import `"cn-hww/moonnbreview" @review` in `moon.pkg`. For checkout development use

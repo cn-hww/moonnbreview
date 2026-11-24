@@ -158,6 +158,38 @@ fn BatchWriter::finish(self : BatchWriter) -> BatchReview raise ReviewError {
 }
 
 ///|
+fn batch_serialization(
+  c : Comparison,
+  gate : Gate,
+  retain : Bool,
+) -> (String, String, String) raise ReviewError {
+  let report = c.to_json()
+  (
+    if c.passes(blocked=gate.blocked()) {
+      "passed"
+    } else {
+      "blocked"
+    },
+    "\"report\":" + report,
+    if retain {
+      "\"comparison\":" + c.to_bundle()
+    } else {
+      ""
+    },
+  )
+}
+
+///|
+fn batch_diagnostic(
+  phase : String,
+  message : String,
+) -> (String, String, String) {
+  let diagnostic = "\"diagnostic\":" +
+    canonical({ "phase": Json(phase), "message": Json(message) })
+  ("error", diagnostic, diagnostic)
+}
+
+///|
 /// Review every explicit pair, in manifest order. Loader/parse/compare errors
 /// become per-pair diagnostics and processing continues. No failed input is
 /// treated as empty or silently skipped. Aggregate output above 8M UTF-16 units
@@ -199,26 +231,44 @@ pub fn Manifest::review_sides(
       phase = "compare"
       let c = compare(old, new, policy~)
       phase = "serialize"
-      let report = c.to_json()
-      (
-        if c.passes(blocked=gate.blocked()) {
-          "passed"
-        } else {
-          "blocked"
-        },
-        "\"report\":" + report,
-        if retain_inputs {
-          "\"comparison\":" + c.to_bundle()
-        } else {
-          ""
-        },
-      )
+      batch_serialization(c, gate, retain_inputs)
     } catch {
-      e => {
-        let diagnostic = "\"diagnostic\":" +
-          canonical({ "phase": Json(phase), "message": Json("\{Repr(e)}") })
-        ("error", diagnostic, diagnostic)
-      }
+      e => batch_diagnostic(phase, "\{Repr(e)}")
+    }
+    writer.push(pair, status, detail, saved)
+  }
+  writer.finish()
+}
+
+///|
+/// Serial, asynchronous counterpart of review_sides. Callbacks may perform IO
+/// without preloading the batch. Each pair keeps the same phase/error semantics,
+/// complete evidence and aggregate limits as the synchronous workflow.
+pub async fn Manifest::review_sides_async(
+  self : Manifest,
+  read_old : async (String) -> String,
+  read_new : async (String) -> String,
+  policy~ : Policy = Policy::{ counts: false, metadata_keys: [], },
+  gate~ : Gate = Gate::new(),
+  retain_inputs~ : Bool = false,
+) -> BatchReview {
+  let writer = batch_writer(policy, gate, retain_inputs)
+  for pair in self.inputs {
+    let mut phase = "read_old"
+    let (status, detail, saved) = try {
+      let old_text = read_old(pair.old_path)
+      phase = "parse_old"
+      let old = Document::parse(old_text)
+      phase = "read_new"
+      let new_text = read_new(pair.new_path)
+      phase = "parse_new"
+      let new = Document::parse(new_text)
+      phase = "compare"
+      let c = compare(old, new, policy~)
+      phase = "serialize"
+      batch_serialization(c, gate, retain_inputs)
+    } catch {
+      e => batch_diagnostic(phase, "\{Repr(e)}")
     }
     writer.push(pair, status, detail, saved)
   }

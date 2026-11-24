@@ -187,3 +187,15 @@ report/bundle bytes, loader ordering and short circuiting, both read/parse sides
 error recovery, suppression/gates and empty retained replay. The compiled public
 example uses two sources. Totals: 98 core + 9 JUnit blocks on portable targets,
 plus the existing 6 Git blocks on Wasm/native.
+
+## Pinned Git batch review (2026-11-24)
+
+Two core async blocks verify actual yielding, strict serial IO/short circuiting,
+all four read/parse error phases, byte equivalence, gates, retention and empty IO.
+Five Git blocks verify full IDs, ref movement after pinning, literal/renamed paths,
+missing/malformed inputs, later recovery, unchanged dirty repository state, gates
+and offline replay. Totals: 100 core + 9 JUnit blocks on JS; 120 including 11 Git
+blocks on Wasm/native. Wasm-GC runs 98 core + 9 JUnit blocks: Moon's runner skips
+the two async tests on that backend, so no Wasm-GC async execution is claimed.
+The Git end-to-end verifier now exercises batch CLI JSON,
+JUnit, retained replay, strict options and 0/1/2 on real Jupyter-derived data.
