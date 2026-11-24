@@ -187,3 +187,30 @@ async test "symlink entries invalid UTF8 and unsupported notebook bytes never di
   }
   ignore(@git.Snapshot::load(dir, "HEAD", "lesson.ipynb"))
 }
+
+///|
+async test "explicit old and new paths preserve identities through notebook renames" {
+  let dir = @fs.tmpdir(prefix="nbreview-git-")
+  defer cleanup(dir)
+  setup_repo(dir, "lesson.ipynb")
+  let renamed = "改名 [1] $(review).ipynb"
+  ignore(run_git(dir, ["mv", "--", "lesson.ipynb", renamed]))
+  ignore(run_git(dir, ["commit", "--quiet", "-m", "rename fixture"]))
+  let old = @git.Snapshot::load(dir, "HEAD~2", "lesson.ipynb")
+  let new = @git.Snapshot::load(dir, "HEAD", renamed)
+  assert_eq(old.path(), "lesson.ipynb")
+  assert_eq(new.path(), renamed)
+  let c = @review.compare(old.document(), new.document())
+  assert_eq(c.changes().length(), 1)
+  assert_eq(c.changes()[0].kind, @review.Source)
+  assert_eq(c.changes()[0].cell_id, Some("a"))
+  assert_true(refused(dir, "HEAD", "lesson.ipynb"))
+  let before_rename = @git.Snapshot::load(dir, "HEAD~1", "lesson.ipynb")
+  assert_true(
+    @review.compare(before_rename.document(), new.document()).passes(),
+  )
+  assert_eq(
+    @review.Comparison::from_bundle(c.to_bundle()).to_json(),
+    c.to_json(),
+  )
+}

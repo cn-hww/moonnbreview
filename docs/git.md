@@ -87,3 +87,26 @@ The executable package is named `cmd/git-review` so its Windows executable is
 `git-review.exe`. Naming it `git.exe` would shadow the real Git during child
 process lookup. See Microsoft's [CreateProcess search order](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw).
 The native end-to-end workflow is required in CI to guard this integration.
+
+## A renamed or relocated notebook
+
+When the proposed commit moves a file, supply its new path explicitly:
+
+```text
+moon run cmd/git-review -- check /path/to/analysis BASE_COMMIT HEAD notebooks/old.ipynb --new-path lessons/new.ipynb --policy fixtures/policy.json
+```
+
+The positional path belongs to the old commit; `--new-path` belongs to the new
+commit. Omitting it keeps the existing same-path behavior. The flag works with
+review, check and bundle, and may occur once. Each path is checked by the same
+literal-path and regular-file rules. Missing/unsafe paths refuse with exit 2;
+there is no implicit rename detection or synthetic empty notebook.
+
+File location does not change cell identity: a pure rename has no semantic
+changes; a renamed notebook with edited source reports source changes against its
+retained cell IDs. Bundles still contain complete inputs/policy, not Git path
+provenance; record paths and resolved commits separately when auditing. Library
+users load two `Snapshot`s with the explicit old/new paths and compare documents.
+The Git verifier now tests the real fixture across a committed Unicode rename,
+bundle replay, pure-rename exit 0, malformed/repeated flags and untouched dirty
+renamed worktree/index/HEAD on Wasm and native.

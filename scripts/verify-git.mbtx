@@ -112,5 +112,32 @@ async fn main {
   assert_eq(git(dir, ["rev-parse", "HEAD"]), head)
   assert_eq(@fs.read_file("fixtures/before.ipynb").binary(), before)
   assert_eq(@fs.read_file("fixtures/after.ipynb").binary(), after)
+  // Rename only after the preceding dirty-index/worktree invariants were checked.
+  ignore(git(dir, ["restore", "--staged", "--worktree", "--", path]))
+  let renamed = "notebooks/改名 [2] $(review).ipynb"
+  ignore(git(dir, ["mv", "--", path, renamed]))
+  ignore(git(dir, ["commit", "--quiet", "-m", "rename fixture"]))
+  let rename_head = git(dir, ["rev-parse", "HEAD"])
+  @fs.write_file(dir + "/" + renamed, "dirty renamed notebook")
+  let rename_status = git(dir, ["status", "--porcelain=v1"])
+  let rename_index = @fs.read_file(dir + "/.git/index").binary()
+  let renamed_args = ["check", dir, "HEAD~2", "HEAD", path, "--new-path", renamed, "--policy", "fixtures/policy.json"]
+  let expected_json = cli(target, "cmd/main", ["check", "fixtures/before.ipynb", "fixtures/after.ipynb", "--policy", "fixtures/policy.json"], 1)
+  assert_eq(cli(target, "cmd/git-review", renamed_args, 1), expected_json)
+  ignore(cli(target, "cmd/git-review", ["check", dir, "HEAD~1", "HEAD", path, "--new-path", renamed], 0))
+  let renamed_bundle = renamed_args.copy()
+  renamed_bundle[0] = "bundle"
+  @fs.write_file(bundle_path, cli(target, "cmd/git-review", renamed_bundle, 0))
+  assert_eq(cli(target, "cmd/main", ["replay", bundle_path], 0), expected_json)
+  for extra in [["--new-path", "../bad"], ["--new-path", ""], ["--new-path", "missing.ipynb"], ["--new-path", renamed, "--new-path", renamed], ["--new-path"]] {
+    let bad = ["check", dir, "HEAD~1", "HEAD", path]
+    for arg in extra { bad.push(arg) }
+    ignore(cli(target, "cmd/git-review", bad, 2))
+  }
+  ignore(cli(target, "cmd/git-review", ["check", dir, "HEAD~1", "HEAD", path], 2))
+  assert_eq(git(dir, ["rev-parse", "HEAD"]), rename_head)
+  assert_eq(@fs.read_file(dir + "/.git/index").binary(), rename_index)
+  assert_eq(git(dir, ["status", "--porcelain=v1"]), rename_status)
+  assert_eq(@fs.read_file(dir + "/" + renamed).text(), "dirty renamed notebook")
   println("Git revision workflow passed on " + target + "; HEAD, index and notebook worktree unchanged.")
 }

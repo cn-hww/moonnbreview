@@ -62,6 +62,8 @@ moon run cmd/git-review -- check . HEAD HEAD fixtures/before.ipynb --policy fixt
 Use `review|check|bundle REPO OLD_REF NEW_REF PATH` for your own repository.
 The [Git workflow](docs/git.md) documents the reusable snapshot API, real-data
 end-to-end example and its Wasm/native scope.
+For a renamed notebook, append `--new-path PROPOSED_PATH`; the positional path
+continues to identify the old commit's file. No rename heuristics are applied.
 
 To choose which active changes block CI, use `check ... --gate fixtures/gate.json`.
 The [gate file](docs/gates.md) selects categories without removing evidence;

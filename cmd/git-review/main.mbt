@@ -4,13 +4,14 @@ async fn main {
     let args = @env.args()
     guard args.length() >= 6 && ["review", "check", "bundle"].contains(args[1]) else {
       fail(
-        "usage: review|check|bundle REPO OLD_REF NEW_REF PATH [--policy FILE] [--format json|markdown|html]; check also accepts --gate FILE",
+        "usage: review|check|bundle REPO OLD_REF NEW_REF PATH [--new-path PATH] [--policy FILE] [--format json|markdown|html]; check also accepts --gate FILE",
       )
     }
     let mut policy_path : String? = None
     let mut format : String? = None
     let mut focus_changes = false
     let mut gate_path : String? = None
+    let mut new_path : String? = None
     let mut i = 6
     while i < args.length() {
       if args[i] == "--focus-changes" {
@@ -21,6 +22,10 @@ async fn main {
       }
       guard i + 1 < args.length() else { fail("option requires a value") }
       match args[i] {
+        "--new-path" => {
+          guard new_path is None else { fail("--new-path may occur once") }
+          new_path = Some(args[i + 1])
+        }
         "--gate" => {
           guard args[1] == "check" && gate_path is None else {
             fail("--gate may occur once and is only valid for check")
@@ -57,7 +62,11 @@ async fn main {
       None => @review.Gate::new()
     }
     let old = @snapshots.Snapshot::load(args[2], args[3], args[5])
-    let new = @snapshots.Snapshot::load(args[2], args[4], args[5])
+    let new = @snapshots.Snapshot::load(
+      args[2],
+      args[4],
+      new_path.unwrap_or(args[5]),
+    )
     let comparison = @review.compare(old.document(), new.document(), policy~)
     let text = if args[1] == "bundle" {
       comparison.to_bundle()

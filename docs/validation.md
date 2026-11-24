@@ -129,3 +129,11 @@ HTML has no scripts or rendered notebook markup and includes complete evidence.
 Browser visual preview was attempted but the browser URL security policy refused
 the local `file://` document. No screenshot/layout-interaction pass is claimed;
 the automated evidence, escaping and CLI checks are independent of that attempt.
+
+## Explicit Git rename review (2026-11-24)
+
+One new async Git integration block (77 total on Wasm/native; 71 core blocks
+unchanged) verifies explicit old/new paths, Unicode/shell-character filenames,
+retained cell identities, source edits, pure-rename equivalence, missing old paths
+and bundle replay. The real-data Git verifier additionally checks new-path option
+errors and dirty renamed worktree/index/HEAD preservation through the CLI.
