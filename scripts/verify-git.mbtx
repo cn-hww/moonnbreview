@@ -1,0 +1,97 @@
+----
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+----
+
+async fn git(dir : String, args : Array[String]) -> String {
+  let argv = ["-c", "user.name=cn-hww", "-c", "user.email=292744651+cn-hww@users.noreply.github.com", "-c", "commit.gpgsign=false", "-c", "core.autocrlf=false"]
+  for arg in args { argv.push(arg) }
+  let result = @shell.Cmd("git", argv, cwd=dir).output()
+  result.check()
+  result.stdout()
+}
+
+async fn cli(target : String, entry : String, args : Array[String], expected : Int32) -> String {
+  let argv = ["run", "--deny-warn", "--target", target, entry, "--"]
+  for arg in args { argv.push(arg) }
+  let result = @shell.Cmd("moon", argv).output()
+  guard result.exit_code() == expected else {
+    println(result.stdout())
+    println(result.stderr())
+    fail("unexpected Git workflow exit")
+  }
+  result.stdout().replace_all(old="\r\n", new="\n")
+}
+
+async fn cleanup(dir : String) -> Unit nocancel {
+  @async.protect_from_cancel(() => {
+    if @env.get_env_var("OS") == Some("Windows_NT") {
+      let root = @fs.realpath(dir).replace_all(old="/", new="\\")
+      let result = @shell.Cmd("attrib.exe", ["-R", root + "\\.git\\objects\\*", "/S"]).output()
+      result.check()
+    }
+    @fs.rmdir(dir, recursive=true)
+  })
+}
+
+async fn main {
+  let args = @env.args()
+  guard args.length() == 2 && ["wasm", "native"].contains(args[1]) else { fail("usage: verify-git.mbtx wasm|native") }
+  let target = args[1]
+  let dir = @fs.tmpdir(prefix="nbreview-git-e2e-")
+  defer cleanup(dir)
+  ignore(git(dir, ["init", "--quiet"]))
+  @fs.write_file(dir + "/.gitattributes", "* -text\n")
+  @fs.mkdir(dir + "/notebooks")
+  let path = "notebooks/课程 [1] $(review).ipynb"
+  let before = @fs.read_file("fixtures/before.ipynb").binary()
+  let after = @fs.read_file("fixtures/after.ipynb").binary()
+  @fs.write_file(dir + "/" + path, before)
+  ignore(git(dir, ["add", "--all"]))
+  ignore(git(dir, ["commit", "--quiet", "-m", "fixture before"]))
+  @fs.write_file(dir + "/" + path, after)
+  ignore(git(dir, ["add", "--all"]))
+  ignore(git(dir, ["commit", "--quiet", "-m", "fixture after"]))
+  @fs.write_file(dir + "/" + path, "staged invalid notebook")
+  ignore(git(dir, ["add", "--all"]))
+  @fs.write_file(dir + "/" + path, "unstaged invalid notebook")
+  let status = git(dir, ["status", "--porcelain=v1"])
+  let index = @fs.read_file(dir + "/.git/index").binary()
+  let head = git(dir, ["rev-parse", "HEAD"])
+  let file_args = ["check", "fixtures/before.ipynb", "fixtures/after.ipynb", "--policy", "fixtures/policy.json"]
+  let git_args = ["check", dir, "HEAD~1", "HEAD", path, "--policy", "fixtures/policy.json"]
+  assert_eq(cli(target, "cmd/git", git_args, 1), cli(target, "cmd/main", file_args, 1))
+  let review = git_args.copy()
+  review[0] = "review"
+  ignore(cli(target, "cmd/git", review, 0))
+  for argv in [file_args, git_args] { argv.push("--format"); argv.push("markdown") }
+  assert_eq(cli(target, "cmd/git", git_args, 1), cli(target, "cmd/main", file_args, 1))
+  ignore(cli(target, "cmd/git", ["check", dir, "HEAD", "HEAD", path], 0))
+  let bundle = cli(target, "cmd/git", ["bundle", dir, "HEAD~1", "HEAD", path, "--policy", "fixtures/policy.json"], 0)
+  let artifacts = @fs.tmpdir(prefix="nbreview-git-artifacts-")
+  defer @fs.rmdir(artifacts, recursive=true)
+  let bundle_path = artifacts + "/review.json"
+  @fs.write_file(bundle_path, bundle)
+  let replay = cli(target, "cmd/main", ["replay", bundle_path, "--format", "markdown"], 0)
+  assert_eq(replay, cli(target, "cmd/git", git_args, 1))
+  for argv in [
+    ["review", dir, "--help", "HEAD", path],
+    ["review", dir, "HEAD", "HEAD", "missing.ipynb"],
+    ["review", dir, "HEAD", "HEAD", "../lesson.ipynb"],
+    ["review", dir, "HEAD", "HEAD", path, "--format", "html"],
+    ["review", dir, "HEAD", "HEAD", path, "--policy", "fixtures/policy.json", "--policy", "fixtures/policy.json"],
+    ["review", dir, "HEAD", "HEAD", path, "--ignore-execution-counts"],
+    ["bundle", dir, "HEAD", "HEAD", path, "--format", "json"],
+  ] { ignore(cli(target, "cmd/git", argv, 2)) }
+  assert_eq(@fs.read_file(dir + "/" + path).text(), "unstaged invalid notebook")
+  assert_eq(@fs.read_file(dir + "/.git/index").binary(), index)
+  assert_eq(git(dir, ["status", "--porcelain=v1"]), status)
+  assert_eq(git(dir, ["rev-parse", "HEAD"]), head)
+  assert_eq(@fs.read_file("fixtures/before.ipynb").binary(), before)
+  assert_eq(@fs.read_file("fixtures/after.ipynb").binary(), after)
+  println("Git revision workflow passed on " + target + "; HEAD, index and notebook worktree unchanged.")
+}

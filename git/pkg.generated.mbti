@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "cn-hww/moonnbreview/git"
+
+import {
+  "cn-hww/moonnbreview",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Snapshot {
+  // private fields
+}
+pub fn Snapshot::commit(Self) -> String
+pub fn Snapshot::document(Self) -> @moonnbreview.Document
+pub async fn Snapshot::load(String, String, String) -> Self
+pub fn Snapshot::path(Self) -> String
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,10 @@
+import {
+  "cn-hww/moonnbreview" @review,
+  "cn-hww/moonnbreview/git" @snapshots,
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+
+supported_targets = "native+wasm"
+
+pkgtype(kind: "executable")

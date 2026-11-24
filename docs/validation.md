@@ -37,8 +37,8 @@ Initial verification caught and corrected the Node argv offset and report Option
 serialization before publication. Early failed attempts are not counted as passes.
 The project's own tests are not an exhaustive notebook-format conformance suite.
 
-Deferred capabilities: execution, automatic merge, legacy matching, browser UI,
-Git-ref comparison, report-import approval and package-registry publication.
+Deferred at the initial slice: execution, automatic merge, legacy matching,
+browser UI, Git-ref comparison, report-import approval and package publication.
 
 ## Versioned policy files
 
@@ -69,3 +69,22 @@ The same API mistake in JSON Pointer escaping is corrected for every `/` and `~`
 Two additional public tests (50 total) cover repeated runs, escape-looking field
 names, replay and Markdown locations. This changes previously incorrect pointers
 for keys with repeated characters; existing normal-key outputs are unchanged.
+
+## Git snapshot workflow (2026-11-24)
+
+Five async black-box integration test blocks add committed-snapshot comparison and
+replay, resolved identities, literal Unicode/special-character paths, dirty worktree
+and index preservation, nested repository callers, missing/invalid references,
+symlink refusal without OS symlink privileges, malformed UTF-8, unsupported formats,
+capture limits and recovery. Total: 55 blocks on Wasm/native, 50 core blocks on
+Wasm-GC/JS. The optional Git packages explicitly support only Wasm/native.
+
+The real-data [Git verifier](git.md) builds a temporary repository and compares
+the committed before/after notebooks while their staged/unstaged copies are
+invalid. It checks exact JSON/Markdown equivalence, bundle replay, all exit classes
+and unchanged HEAD/index/worktree. Windows cleanup clears read-only Git object
+attributes only inside those newly allocated temporary fixtures.
+
+Local verification uses Windows for portable execution and Ubuntu 22.04/WSL for
+actual native execution, with the same pinned toolchain above. Remote CI results
+must still be checked against the final pushed hash.

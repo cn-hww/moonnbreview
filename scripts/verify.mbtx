@@ -28,7 +28,7 @@ async fn main {
   let args = @env.args()
   guard args.length() == 1 || args == [args[0], "--portable"] || args == [args[0], "--native"] else { fail("usage: verify.mbtx [--portable|--native]") }
   let targets = if args.length() == 2 && args[1] == "--portable" { ["wasm", "wasm-gc", "js"] } else if args.length() == 2 { ["native"] } else { ["wasm", "wasm-gc", "js", "native"] }
-  for path in ["scripts/verify.mbtx", "scripts/prepare-fixture.mbtx"] {
+  for path in ["scripts/verify.mbtx", "scripts/prepare-fixture.mbtx", "scripts/verify-git.mbtx"] {
     ignore(command(["fmt", path], 0))
   }
   for args in [["fmt"], ["info"], ["check", "--target", "all", "--deny-warn"]] {
@@ -40,6 +40,9 @@ async fn main {
   let mut markdown_baseline : String? = None
   for target in targets {
     println(command(["test", "--target", target, "--deny-warn"], 0))
+    if target == "wasm" || target == "native" {
+      println(command(["run", "--deny-warn", "scripts/verify-git.mbtx", target], 0))
+    }
     let prefix = ["run", "--target", target, "cmd/main", "--"]
     let args = prefix.copy()
     for arg in ["check", "fixtures/before.ipynb", "fixtures/after.ipynb", "--ignore-execution-counts", "--ignore-metadata", "execution"] { args.push(arg) }

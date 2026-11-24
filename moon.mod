@@ -17,4 +17,5 @@ preferred_target = "wasm"
 import {
   "moonrockz/notebooks@0.11.0",
   "moonbitlang/x@0.5.5",
+  "moonbitlang/async@0.22.4",
 }

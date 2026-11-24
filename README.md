@@ -48,6 +48,17 @@ For a human-readable review, add `--format markdown` to `review`, `check` or
 explicit bounded value previews. It does not replace the full JSON evidence.
 See [Markdown reports](docs/markdown.md) for limits and a complete real-data workflow.
 
+Compare committed notebooks directly with the optional Git adapter, without
+checkout or index changes:
+
+```text
+moon run cmd/git -- check . HEAD HEAD fixtures/before.ipynb --policy fixtures/policy.json
+```
+
+Use `review|check|bundle REPO OLD_REF NEW_REF PATH` for your own repository.
+The [Git workflow](docs/git.md) documents the reusable snapshot API, real-data
+end-to-end example and its Wasm/native scope.
+
 ## Use the library
 
 Import `"cn-hww/moonnbreview" @review` in `moon.pkg`. For checkout development use
@@ -117,7 +128,7 @@ partially suppressed.
   checked before a `Document` is accepted. Original formatting is not retained.
 
 Not implemented: notebook execution, automatic merge, legacy ID inference, pixel
-diffs, base64 image validation, trusted signatures, browser UI or Git-ref handling.
+diffs, base64 image validation, trusted signatures or browser UI.
 Rich payloads are compared as data; no HTML, JavaScript or notebook code executes.
 
 ## Validation and development
@@ -144,6 +155,6 @@ This is a complementary review layer over existing notebook models, informed by
 nbdime's workflow. It is not a complete nbdime port, a notebook codec replacement
 or a claim of ecosystem uniqueness. See [research](docs/research.md).
 
-Next coherent capabilities are Git-ref comparison, followed by
-offline rich-output presentation. Legacy files require a separate, explicit
+The next coherent capability is offline rich-output presentation.
+Legacy files require a separate, explicit
 identity/ambiguity design. These capabilities are planned, not implemented.

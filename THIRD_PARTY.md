@@ -16,7 +16,9 @@ moonbit-community/toml 0.5.0 (Apache-2.0), bobzhang/lexer 0.3.0 (Apache-2.0),
 and moonbit-community/yaml 0.0.8 (MIT). The CLI
 and development scripts resolve additional transitive packages through the module
 graph; `moon tree` shows the exact graph. Their license files remain in dependency
-archives. `moonbitlang/async 0.22.4` (Apache-2.0) is used by development automation.
+archives. `moonbitlang/async 0.22.4` (Apache-2.0) is used by development automation
+and the optional Git snapshot library/CLI. Git is an external process prerequisite,
+not bundled source; command behavior references are linked in [Git workflow](docs/git.md).
 Dependencies are fetched by Moon and are not vendored into this repository.
 
 External fixture: Jupyter nbformat's `tests/test4.ipynb`, BSD-3-Clause, pinned to
