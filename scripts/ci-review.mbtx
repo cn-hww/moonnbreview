@@ -67,7 +67,7 @@ async fn run(args : Array[String]) -> Int {
   let bundle = text(capture)
   guard [0, 2].contains(capture.exit_code()) &&
     (@json.parse(bundle, max_nesting_depth=80, preserve_number_repr=true) catch { _ => Json::null() }) is Object(fields) &&
-    fields.get("format") == Some(Json("moonnbreview/batch-bundle-1")) else {
+    [Some(Json("moonnbreview/batch-bundle-1")), Some(Json("moonnbreview/batch-bundle-2"))].contains(fields.get("format")) else {
     fail("batch capture failed; no artifact directory created: " + bundle + capture.stderr())
   }
   // Exclusive mkdir protects existing inputs/artifacts. Any interrupted write can
@@ -82,7 +82,7 @@ async fn run(args : Array[String]) -> Int {
   let gate_code = replay.exit_code()
   guard [0, 1, 2].contains(gate_code) &&
     (@json.parse(report, max_nesting_depth=80, preserve_number_repr=true) catch { _ => Json::null() }) is Object(root) &&
-    root.get("format") == Some(Json("moonnbreview/batch-1")) else {
+    [Some(Json("moonnbreview/batch-1")), Some(Json("moonnbreview/batch-2"))].contains(root.get("format")) else {
     fail("replay failed; bundle retained, but artifact directory is incomplete: " + report + replay.stderr())
   }
   @fs.write_file(out + "/report.json", report)

@@ -10,6 +10,8 @@ import {
 // Values
 pub fn compare(Document, Document, policy? : Policy) -> Comparison raise ReviewError
 
+pub fn compare_files(Document?, Document?, policy? : Policy) -> Comparison raise ReviewError
+
 // Errors
 #derive(Eq, @debug.Debug)
 pub suberror ReviewError {
@@ -69,6 +71,25 @@ pub struct Document {
 pub fn Document::notebook(Self) -> @nbformat.Notebook
 pub fn Document::parse(String) -> Self raise ReviewError
 pub fn Document::to_string(Self) -> String raise ReviewError
+
+pub struct FileManifest {
+  // private fields
+}
+pub fn FileManifest::from_json(String) -> Self raise ReviewError
+pub fn FileManifest::from_manifest(Manifest) -> Self
+pub fn FileManifest::new(Array[FilePair]) -> Self raise ReviewError
+pub fn FileManifest::pairs(Self) -> Array[FilePair]
+pub fn FileManifest::review(Self, (String) -> String raise, policy? : Policy, gate? : Gate, retain_inputs? : Bool) -> BatchReview raise ReviewError
+pub fn FileManifest::review_sides(Self, (String) -> String raise, (String) -> String raise, policy? : Policy, gate? : Gate, retain_inputs? : Bool) -> BatchReview raise ReviewError
+pub async fn FileManifest::review_sides_async(Self, async (String) -> String, async (String) -> String, policy? : Policy, gate? : Gate, retain_inputs? : Bool) -> BatchReview
+pub fn FileManifest::to_json(Self) -> String
+
+#derive(Eq, @debug.Debug)
+pub(all) struct FilePair {
+  id : String
+  old_path : String?
+  new_path : String?
+}
 
 pub struct Gate {
   // private fields

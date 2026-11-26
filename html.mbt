@@ -185,7 +185,13 @@ pub fn Comparison::to_html(
     out.write("</section>\n")
   }
   out.write(
-    "<details><summary>Complete JSON evidence (report-1)</summary><div class=evidence>\n",
+    "<details><summary>Complete JSON evidence (" +
+    (if self.old is None || self.new is None {
+      "file-report-1"
+    } else {
+      "report-1"
+    }) +
+    ")</summary><div class=evidence>\n",
   )
   out.pre(json)
   out.write("</div></details>\n</main></body></html>\n")

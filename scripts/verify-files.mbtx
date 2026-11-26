@@ -1,0 +1,61 @@
+----
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "tc-adventureking/junit_delta@0.4.0" @codec,
+}
+----
+async fn cli(target : String, args : Array[String], expected : Int) -> String {
+  let argv = ["run","--deny-warn","--target",target,"cmd/batch","--"]
+  for arg in args { argv.push(arg) }
+  let result = @shell.Cmd("moon",argv).output()
+  guard result.exit_code() == expected else { println(result.stdout());println(result.stderr());fail("unexpected file lifecycle CLI exit") }
+  result.stdout().replace_all(old="\r\n",new="\n")
+}
+async fn main {
+  let args = @env.args()
+  guard args.length()==2 && ["wasm","wasm-gc","js","native"].contains(args[1]) else { fail("usage: verify-files.mbtx TARGET") }
+  let target=args[1]
+  let before=@fs.read_file("fixtures/before.ipynb").binary()
+  let after=@fs.read_file("fixtures/after.ipynb").binary()
+  let config=["fixtures/file-manifest.json","--policy","fixtures/policy.json"]
+  let review=["check"]; for arg in config { review.push(arg) }
+  let report=cli(target,review,1)
+  guard @json.parse(report) is Object(root) && root["results"] is Array(entries) && entries[0] is Object(added) && entries[1] is Object(removed) else { fail("missing lifecycle evidence") }
+  assert_eq(root["format"],Json("moonnbreview/batch-2"))
+  assert_eq(root["summary"],({"total":3,"passed":0,"blocked":3,"failed":0}:Json))
+  assert_eq(added["old"],Json::null());assert_eq(removed["new"],Json::null())
+  let dir=@fs.tmpdir(prefix="nbreview-file-cli-")
+  defer @fs.rmdir(dir,recursive=true)
+  let capture=review.copy();capture[0]="bundle"
+  let bundle=dir+"/bundle.json"
+  @fs.write_file(bundle,cli(target,capture,0))
+  assert_eq(cli(target,["replay",bundle],1),report)
+  for format in ["markdown","junit"] {
+    let argv=review.copy();argv.push("--format");argv.push(format)
+    let rendered=cli(target,argv,1)
+    assert_eq(cli(target,["replay",bundle,"--format",format],1),rendered)
+    if format=="junit" {
+      let suite=@codec.JUnitDocument::from_xml(rendered).root
+      assert_eq(suite.attribute("failures"),Some("3"))
+      let cases=suite.elements(name=Some("testcase"))
+      assert_eq(cases[1].attribute("file"),Some("fixtures/before.ipynb"))
+    }
+  }
+  let gate=dir+"/allow.json"
+  @fs.write_file(gate,"{\"format\":\"moonnbreview/gate-1\",\"blocked\":[]}")
+  let allowed=review.copy();allowed.push("--gate");allowed.push(gate)
+  ignore(cli(target,allowed,0))
+  let invalid=dir+"/invalid.json"
+  @fs.write_file(invalid,"{\"format\":\"moonnbreview/manifest-2\",\"pairs\":[{\"id\":\"bad\",\"old\":null,\"new\":null}]}")
+  ignore(cli(target,["check",invalid],2))
+  @fs.write_file(invalid,( {"format":"moonnbreview/manifest-2","pairs":[{"id":"missing","old":null,"new":Json(dir+"/missing.ipynb")},{"id":"recovery","old":"fixtures/before.ipynb","new":null}]}:Json).stringify())
+  let failure=cli(target,["check",invalid],2)
+  assert_true(failure.contains("read_new") && failure.contains("\"status\":\"blocked\""))
+  assert_eq(@fs.read_file("fixtures/before.ipynb").binary(),before)
+  assert_eq(@fs.read_file("fixtures/after.ipynb").binary(),after)
+  println("Whole-file lifecycle and replay passed on "+target)
+}

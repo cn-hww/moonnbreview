@@ -93,6 +93,10 @@ For a complete CI job, use the [artifact workflow](docs/ci.md). One `.mbtx` comm
 saves the retained bundle, JSON, Markdown, JUnit and pinned Git IDs, keeps evidence
 when the gate fails, and reports any export refusal explicitly.
 
+Whole-file additions and deletions are supported through explicit nullable paths
+in [manifest-2 and the file lifecycle API](docs/file-lifecycle.md). Existing v1
+manifests/reports remain compatible. Try `moon run cmd/batch -- check fixtures/file-manifest.json`.
+
 ## Use the library
 
 Import `"cn-hww/moonnbreview" @review` in `moon.pkg`. For checkout development use

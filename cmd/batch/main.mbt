@@ -124,7 +124,7 @@ fn main {
       Some(path) => @review.Gate::from_json(read(path))
       None => @review.Gate::new()
     }
-    let report = @review.Manifest::from_json(read(args[2])).review(
+    let report = @review.FileManifest::from_json(read(args[2])).review(
       read,
       policy~,
       gate~,

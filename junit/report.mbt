@@ -44,7 +44,16 @@ pub fn render(batch : @review.BatchReview) -> String raise ExportError {
           string(fields["id"]),
           classname=Some("moonnbreview"),
         )
-        .with_attribute("file", string(fields["new"]))
+        .with_attribute(
+          "file",
+          string(
+            if fields["new"] is Null {
+              fields["old"]
+            } else {
+              fields["new"]
+            },
+          ),
+        )
         .with_output("system-out", entry.stringify())
       if status == "blocked" {
         testcase = testcase.with_results([

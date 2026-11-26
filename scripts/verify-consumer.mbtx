@@ -85,6 +85,11 @@ async fn main {
     #|  assert_true(@junit.render(b).contains("NotebookGateBlocked"))
     #|  guard @json.parse(b.to_json()) is Object(root) && root["results"] is Array(entries) && entries[0] is Object(entry) else { abort("missing public evidence") }
     #|  assert_eq(entry["report"], @json.parse(c.to_json()))
+    #|  let file = @review.compare_files(None, Some(@review.Document::parse(after)))
+    #|  assert_eq(file.changes()[0].kind, @review.Structure)
+    #|  let files = @review.FileManifest::new([{id:"added",old_path:None,new_path:Some("lesson.ipynb")}]).review(_ => after, retain_inputs=true)
+    #|  assert_eq(@review.BatchReview::from_bundle(files.to_bundle()).to_json(), files.to_json())
+    #|  assert_true(@junit.render(files).contains("NotebookGateBlocked"))
     #|}
   @fs.write_file(consumer + "/consumer_test.mbt", source + consumer_case)
   @fs.mkdir(consumer + "/git-demo")

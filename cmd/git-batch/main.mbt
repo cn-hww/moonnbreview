@@ -76,9 +76,11 @@ async fn main {
       Some(path) => @review.Gate::from_json(@fs.read_file(path).text())
       None => @review.Gate::new()
     }
-    let manifest = @review.Manifest::from_json(@fs.read_file(args[5]).text())
+    let manifest = @review.FileManifest::from_json(
+      @fs.read_file(args[5]).text(),
+    )
     let revisions = @snapshots.Revisions::resolve(args[2], args[3], args[4])
-    let batch = revisions.review(
+    let batch = revisions.review_files(
       manifest,
       policy~,
       gate~,

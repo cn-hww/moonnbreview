@@ -283,5 +283,5 @@ pub fn compare(
       }
     }
   }
-  { old, new, policy, items, }
+  { old: Some(old), new: Some(new), policy, items, }
 }

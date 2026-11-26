@@ -56,8 +56,8 @@ pub struct Change {
 
 ///|
 pub struct Comparison {
-  priv old : Document
-  priv new : Document
+  priv old : Document?
+  priv new : Document?
   priv policy : Policy
   priv items : Array[Change]
 }
@@ -169,6 +169,12 @@ pub fn Comparison::to_json(self : Comparison) -> String raise ReviewError {
       self.items.filter(c => c.suppressed_by is Some(_)).map(Change::json),
     ),
   }
+  if self.old is None || self.new is None {
+    let fields = object(report)
+    fields["format"] = Json("moonnbreview/file-report-1")
+    fields["old_present"] = Json(self.old is Some(_))
+    fields["new_present"] = Json(self.new is Some(_))
+  }
   let text = canonical(report)
   guard text.length() <= 8000000 else {
     raise Invalid("report exceeds 8000000 UTF-16 units; reduce input")
@@ -179,10 +185,22 @@ pub fn Comparison::to_json(self : Comparison) -> String raise ReviewError {
 ///|
 /// Portable replay bundle binding both complete inputs and the exact policy.
 pub fn Comparison::to_bundle(self : Comparison) -> String raise ReviewError {
-  let old = checked_json(self.old.to_string())
-  let new = checked_json(self.new.to_string())
+  let old = match self.old {
+    Some(doc) => checked_json(doc.to_string())
+    None => Json::null()
+  }
+  let new = match self.new {
+    Some(doc) => checked_json(doc.to_string())
+    None => Json::null()
+  }
   let text = canonical({
-    "format": "moonnbreview/bundle-1",
+    "format": Json(
+      if self.old is Some(_) && self.new is Some(_) {
+        "moonnbreview/bundle-1"
+      } else {
+        "moonnbreview/file-bundle-1"
+      },
+    ),
     "old": old,
     "new": new,
     "policy": self.policy.json(),
@@ -210,11 +228,28 @@ pub fn Comparison::from_bundle(text : String) -> Comparison raise ReviewError {
   validate_tree(raw, -4)
   let f = object(raw)
   guard f.length() == 4 &&
-    f.get("format") == Some(Json("moonnbreview/bundle-1")) &&
+    (
+      f.get("format") == Some(Json("moonnbreview/bundle-1")) ||
+      f.get("format") == Some(Json("moonnbreview/file-bundle-1"))
+    ) &&
     f.contains("old") &&
     f.contains("new") &&
     f.contains("policy") else {
-    raise Invalid("expected bundle-1 fields format, old, new, policy only")
+    raise Invalid(
+      "expected bundle-1 or file-bundle-1 fields format, old, new, policy only",
+    )
+  }
+  let absent_old = f["old"] is Null
+  let absent_new = f["new"] is Null
+  let valid_presence = if f["format"] == Json("moonnbreview/file-bundle-1") {
+    absent_old != absent_new
+  } else {
+    !absent_old && !absent_new
+  }
+  guard valid_presence else {
+    raise Invalid(
+      "file-bundle-1 requires exactly one absent side; bundle-1 requires two documents",
+    )
   }
   let p = object(f["policy"])
   guard p.length() == 2 &&
@@ -231,9 +266,17 @@ pub fn Comparison::from_bundle(text : String) -> Comparison raise ReviewError {
     guard k is String(s) else { raise Invalid("expected metadata key string") }
     s
   })
-  compare(
-    Document::parse(canonical(f["old"])),
-    Document::parse(canonical(f["new"])),
+  compare_files(
+    if absent_old {
+      None
+    } else {
+      Some(Document::parse(canonical(f["old"])))
+    },
+    if absent_new {
+      None
+    } else {
+      Some(Document::parse(canonical(f["new"])))
+    },
     policy=Policy::new(
       ignore_execution_counts=counts,
       ignored_metadata_keys=names,

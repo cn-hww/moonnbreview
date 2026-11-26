@@ -109,7 +109,7 @@ test "bundle fields versions diagnostic shapes duplicates and malformed text are
       "{",
       "{}",
       "[]",
-      valid.replace(old="batch-bundle-1", new="batch-bundle-2"),
+      valid.replace(old="batch-bundle-1", new="batch-bundle-3"),
       valid.replace(old="\"entries\":", new="\"summary\":{},\"entries\":"),
       valid.replace(old="\"entries\":", new="\"\\u0065ntries\":[],\"entries\":"),
       valid.replace(old="\"id\":\"source\"", new="\"id\":\"\\ud800\""),

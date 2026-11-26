@@ -1,0 +1,1 @@
+{"format":"moonnbreview/manifest-2","pairs":[{"id":"added-lesson","old":null,"new":"fixtures/after.ipynb"},{"id":"removed-lesson","old":"fixtures/before.ipynb","new":null},{"id":"edited-lesson","old":"fixtures/before.ipynb","new":"fixtures/after.ipynb"}]}

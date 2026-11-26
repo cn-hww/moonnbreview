@@ -17,6 +17,7 @@ pub fn Revisions::new_commit(Self) -> String
 pub fn Revisions::old_commit(Self) -> String
 pub async fn Revisions::resolve(String, String, String) -> Self
 pub async fn Revisions::review(Self, @moonnbreview.Manifest, policy? : @moonnbreview.Policy, gate? : @moonnbreview.Gate, retain_inputs? : Bool) -> @moonnbreview.BatchReview
+pub async fn Revisions::review_files(Self, @moonnbreview.FileManifest, policy? : @moonnbreview.Policy, gate? : @moonnbreview.Gate, retain_inputs? : Bool) -> @moonnbreview.BatchReview
 
 pub struct Snapshot {
   // private fields

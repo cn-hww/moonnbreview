@@ -245,3 +245,16 @@ API member Markdown, metadata and annotated source HTML. This does not publish t
 Mooncakes, prove registry acceptance or
 claim timestamp-reproducible ZIP bytes. Registry dry-run requires owner login and
 was not completed. No registry credential changes or actual publication occurred.
+
+## Explicit whole-file lifecycle (2026-11-26)
+
+Four comparison blocks cover complete add/delete evidence, empty notebooks, policy
+and structural gates, deterministic single replay/renderers, defensive copies,
+legacy bytes and strict presence bundles. Eight file-manifest blocks (including
+one async) cover nullable round trips, absent-side IO avoidance, phase errors,
+recovery, complete batch replay, context/bundle presence agreement, schema/Unicode
+refusal, 64-pair and aggregate limits. One JUnit block checks surviving paths and
+one Git block executes real committed additions/deletions/modifications. Totals:
+141 Wasm/native, 129 JS, 126 Wasm-GC (three async blocks skipped on Wasm-GC).
+The real-data file CLI verifier runs JSON, Markdown, JUnit, offline replay and
+0/1/2 on all four backends, retaining unchanged fixtures and existing v1 behavior.

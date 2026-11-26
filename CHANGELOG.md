@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Explicit whole-Notebook addition/deletion comparisons and nullable manifest-2,
+  batch-2 and replay bundles; existing v1 inputs/outputs remain compatible.
+- File/Git batch CLI support, surviving-path JUnit mapping and complete file
+  evidence retained independently of noise policy or gate selection.
+
 ## 0.1.0 — initial usable source milestone (2026-11-24)
 
 - Strict, preservation-checked nbformat 4.5 input with unique cell IDs, explicit

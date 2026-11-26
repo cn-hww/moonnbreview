@@ -3,6 +3,22 @@ let old_notebook =
   #|{"nbformat":4,"nbformat_minor":5,"metadata":{},"cells":[{"id":"a","cell_type":"markdown","metadata":{},"source":"old"}]}
 
 ///|
+test "JUnit file lifecycle uses surviving path and retains full null context" {
+  let m = @review.FileManifest::new([
+    { id: "added", old_path: None, new_path: Some("new"), },
+    { id: "removed", old_path: Some("old"), new_path: None, },
+  ])
+  let b = m.review(load, retain_inputs=true)
+  let xml = @junit.render(b)
+  let suite = @codec.JUnitDocument::from_xml(xml).root
+  let cases = suite.elements(name=Some("testcase"))
+  assert_eq(cases[0].attribute("file"), Some("new"))
+  assert_eq(cases[1].attribute("file"), Some("old"))
+  assert_eq(suite.attribute("failures"), Some("2"))
+  assert_eq(xml, @junit.render(@review.BatchReview::from_bundle(b.to_bundle())))
+}
+
+///|
 fn load(path : String) -> String raise {
   match path {
     "old" => old_notebook

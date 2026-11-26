@@ -49,3 +49,22 @@ pub async fn Revisions::review(
     retain_inputs~,
   )
 }
+
+///|
+/// Explicit additions/deletions use absent paths; existing paths still fail
+/// normally on IO/format errors. No file identity or absence is inferred here.
+pub async fn Revisions::review_files(
+  self : Revisions,
+  manifest : @review.FileManifest,
+  policy~ : @review.Policy = @review.Policy::new(),
+  gate~ : @review.Gate = @review.Gate::new(),
+  retain_inputs~ : Bool = false,
+) -> @review.BatchReview {
+  manifest.review_sides_async(
+    path => load_text(self.repository, self.old_id, path),
+    path => load_text(self.repository, self.new_id, path),
+    policy~,
+    gate~,
+    retain_inputs~,
+  )
+}

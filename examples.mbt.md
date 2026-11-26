@@ -13,6 +13,21 @@ test "public notebook review workflow" {
     @review.Document::parse(new),
   )
   assert_false(result.passes())
+  let added = @review.compare_files(None, Some(@review.Document::parse(new)))
+  assert_eq(added.changes()[0].kind, @review.Structure)
+  assert_eq(
+    @review.Comparison::from_bundle(added.to_bundle()).to_json(),
+    added.to_json(),
+  )
+  let files = @review.FileManifest::new([
+    { id: "added", old_path: None, new_path: Some("lesson.ipynb"), },
+    { id: "removed", old_path: Some("lesson.ipynb"), new_path: None, },
+  ]).review_sides(_ => old, _ => new, retain_inputs=true)
+  assert_eq(files.exit_code(), 1)
+  assert_eq(
+    @review.BatchReview::from_bundle(files.to_bundle()).to_json(),
+    files.to_json(),
+  )
   let output_gate = @review.Gate::new(blocked=[@review.Output])
   assert_true(result.passes(blocked=output_gate.blocked()))
   assert_eq(

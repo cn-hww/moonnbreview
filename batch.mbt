@@ -23,6 +23,7 @@ priv struct BatchWriter {
   policy : Policy
   gate : Gate
   retain : Bool
+  file_mode : Bool
   entries : Array[String]
   saved : Array[String]
   mut size : Int32
@@ -33,11 +34,17 @@ priv struct BatchWriter {
 }
 
 ///|
-fn batch_writer(policy : Policy, gate : Gate, retain : Bool) -> BatchWriter {
+fn batch_writer(
+  policy : Policy,
+  gate : Gate,
+  retain : Bool,
+  file_mode~ : Bool = false,
+) -> BatchWriter {
   {
     policy,
     gate,
     retain,
+    file_mode,
     entries: [],
     saved: [],
     size: 0,
@@ -49,11 +56,11 @@ fn batch_writer(policy : Policy, gate : Gate, retain : Bool) -> BatchWriter {
 }
 
 ///|
-fn batch_context(pair : ReviewPair) -> Json {
+fn batch_context(pair : FilePair) -> Json {
   {
     "id": Json(pair.id),
-    "old": Json(pair.old_path),
-    "new": Json(pair.new_path),
+    "old": pair.old_path.map(Json::string).unwrap_or(Json::null()),
+    "new": pair.new_path.map(Json::string).unwrap_or(Json::null()),
   }
 }
 
@@ -70,11 +77,22 @@ fn BatchWriter::push(
   detail : String,
   saved_detail : String,
 ) -> Unit raise ReviewError {
+  self.push_file(file_pair(pair), status, detail, saved_detail)
+}
+
+///|
+fn BatchWriter::push_file(
+  self : BatchWriter,
+  pair : FilePair,
+  status : String,
+  detail : String,
+  saved_detail : String,
+) -> Unit raise ReviewError {
   let entry = with_detail(
     canonical({
       "id": Json(pair.id),
-      "old": Json(pair.old_path),
-      "new": Json(pair.new_path),
+      "old": pair.old_path.map(Json::string).unwrap_or(Json::null()),
+      "new": pair.new_path.map(Json::string).unwrap_or(Json::null()),
       "status": Json(status),
     }),
     detail,
@@ -106,7 +124,13 @@ fn BatchWriter::push(
 ///|
 fn BatchWriter::finish(self : BatchWriter) -> BatchReview raise ReviewError {
   let header = canonical({
-    "format": "moonnbreview/batch-1",
+    "format": Json(
+      if self.file_mode {
+        "moonnbreview/batch-2"
+      } else {
+        "moonnbreview/batch-1"
+      },
+    ),
     "policy": checked_json(self.policy.to_json()),
     "gate": checked_json(self.gate.to_json()),
     "summary": {
@@ -127,7 +151,13 @@ fn BatchWriter::finish(self : BatchWriter) -> BatchReview raise ReviewError {
   }
   let bundle = if self.retain {
     let header = canonical({
-      "format": "moonnbreview/batch-bundle-1",
+      "format": Json(
+        if self.file_mode {
+          "moonnbreview/batch-bundle-2"
+        } else {
+          "moonnbreview/batch-bundle-1"
+        },
+      ),
       "policy": checked_json(self.policy.to_json()),
       "gate": checked_json(self.gate.to_json()),
     })
