@@ -6,7 +6,9 @@ async fn main {
       println(
         (
           #|MoonNBReview 0.1.0 — committed notebook batch (Wasm/native)
-          #|review|check|bundle REPO OLD_REF NEW_REF MANIFEST [--policy FILE]
+          #|review|check|bundle REPO OLD_REF NEW_REF [MANIFEST] [--policy FILE]
+          #|Omit MANIFEST to discover changed lowercase .ipynb files automatically.
+          #|discover REPO OLD_REF NEW_REF prints the selected manifest-2 only.
           #|check/bundle only: --gate FILE
           #|review/check: --format json|junit|markdown
           #|--focus-changes requires Markdown and may occur once.
@@ -22,16 +24,29 @@ async fn main {
       println("moonnbreview-git-batch 0.1.0")
       return
     }
-    guard args.length() >= 6 && ["review", "check", "bundle"].contains(args[1]) else {
+    if args.length() >= 2 && args[1] == "discover" {
+      guard args.length() == 5 else {
+        fail("usage: discover REPO OLD_REF NEW_REF; no review options")
+      }
+      let revisions = @snapshots.Revisions::resolve(args[2], args[3], args[4])
+      println(revisions.discover().to_json())
+      return
+    }
+    guard args.length() >= 5 && ["review", "check", "bundle"].contains(args[1]) else {
       fail(
-        "usage: review|check|bundle REPO OLD_REF NEW_REF MANIFEST [--policy FILE] [--gate FILE] [--format json|junit|markdown] [--focus-changes]",
+        "usage: review|check|bundle REPO OLD_REF NEW_REF [MANIFEST] [--policy FILE] [--gate FILE] [--format json|junit|markdown] [--focus-changes] | discover REPO OLD_REF NEW_REF",
       )
     }
     let mut policy_path : String? = None
     let mut gate_path : String? = None
     let mut format : String? = None
     let mut focus_changes = false
-    let mut i = 6
+    let manifest_path = if args.length() > 5 && !args[5].has_prefix("--") {
+      Some(args[5])
+    } else {
+      None
+    }
+    let mut i = if manifest_path is Some(_) { 6 } else { 5 }
     while i < args.length() {
       if args[i] == "--focus-changes" {
         guard !focus_changes else { fail("--focus-changes may occur once") }
@@ -76,10 +91,16 @@ async fn main {
       Some(path) => @review.Gate::from_json(@fs.read_file(path).text())
       None => @review.Gate::new()
     }
-    let manifest = @review.FileManifest::from_json(
-      @fs.read_file(args[5]).text(),
-    )
+    let explicit = match manifest_path {
+      Some(path) =>
+        Some(@review.FileManifest::from_json(@fs.read_file(path).text()))
+      None => None
+    }
     let revisions = @snapshots.Revisions::resolve(args[2], args[3], args[4])
+    let manifest = match explicit {
+      Some(plan) => plan
+      None => revisions.discover()
+    }
     let batch = revisions.review_files(
       manifest,
       policy~,

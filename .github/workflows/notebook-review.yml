@@ -11,9 +11,9 @@ on:
         required: true
         default: HEAD
       manifest:
-        description: Explicit manifest path in this checkout
+        description: Manifest path or --discover for all changed notebooks
         required: true
-        default: fixtures/manifest.json
+        default: --discover
       policy:
         description: Noise policy path in this checkout
         required: true

@@ -32,7 +32,7 @@ async fn cli(target : String, entry : String, args : Array[String]) -> @shell.Ou
 
 async fn run(args : Array[String]) -> Int {
   guard args.length() >= 6 else {
-    fail("usage: ci-review.mbtx REPO OLD_REF NEW_REF MANIFEST NEW_OUTPUT_DIR [--policy FILE] [--gate FILE] [--target wasm|native]")
+    fail("usage: ci-review.mbtx REPO OLD_REF NEW_REF MANIFEST|--discover NEW_OUTPUT_DIR [--policy FILE] [--gate FILE] [--target wasm|native]")
   }
   let out = args[5]
   guard !out.is_empty() && !( @fs.exists(out) ) else {
@@ -60,7 +60,18 @@ async fn run(args : Array[String]) -> Int {
   // Pin both names before the batch starts; notebook content comes from these IDs.
   let old = commit(args[1], args[2])
   let new = commit(args[1], args[3])
-  let capture_args = ["bundle", args[1], old, new, args[4]]
+  let automatic = args[4] == "--discover"
+  let selection = if automatic {
+    let discovered = cli(target, "cmd/git-batch", ["discover", args[1], old, new])
+    guard discovered.exit_code() == 0 else { fail("Git discovery failed: " + text(discovered) + discovered.stderr()) }
+    text(discovered)
+  } else { @fs.read_file(args[4]).text() }
+  // Freeze the selected manifest before capture; never depend on later edits.
+  let selection_dir = @fs.tmpdir(prefix="nbreview-ci-selection-")
+  defer @fs.rmdir(selection_dir, recursive=true)
+  let selection_path = selection_dir + "/manifest.json"
+  @fs.write_file(selection_path, selection)
+  let capture_args = ["bundle", args[1], old, new, selection_path]
   match policy { Some(path) => { capture_args.push("--policy"); capture_args.push(path) }; None => () }
   match gate { Some(path) => { capture_args.push("--gate"); capture_args.push(path) }; None => () }
   let capture = cli(target, "cmd/git-batch", capture_args)
@@ -75,6 +86,7 @@ async fn run(args : Array[String]) -> Int {
   @fs.mkdir(out)
   let bundle_path = out + "/bundle.json"
   @fs.write_file(bundle_path, bundle)
+  @fs.write_file(out + "/manifest.json", selection)
   let provenance : Json = {"format":"moonnbreview/ci-provenance-1", "old_commit":Json(old), "new_commit":Json(new), "manifest":Json(args[4]), "target":Json(target)}
   @fs.write_file(out + "/provenance.json", provenance.stringify() + "\n")
   let replay = cli(target, "cmd/batch", ["replay", bundle_path])

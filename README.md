@@ -96,6 +96,10 @@ when the gate fails, and reports any export refusal explicitly.
 Whole-file additions and deletions are supported through explicit nullable paths
 in [manifest-2 and the file lifecycle API](docs/file-lifecycle.md). Existing v1
 manifests/reports remain compatible. Try `moon run cmd/batch -- check fixtures/file-manifest.json`.
+For an entire PR, omit the manifest:
+`moon run cmd/git-batch -- check REPO BASE_SHA PROPOSED_SHA`.
+[Automatic Git discovery](docs/git-discovery.md) selects added/deleted/modified
+`.ipynb` files and can save the exact selection with the CI artifact runner.
 
 ## Use the library
 

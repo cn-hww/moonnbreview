@@ -1,5 +1,9 @@
 # Batch review between immutable Git revisions
 
+Omit the manifest argument to [discover all changed Notebook paths](git-discovery.md),
+including explicit whole-file additions/deletions. `discover REPO OLD_REF NEW_REF`
+prints the selected manifest without reading Notebook bodies.
+
 Use a manifest to select files from two commits, including explicit renames,
 without checking out either revision or staging any changes:
 

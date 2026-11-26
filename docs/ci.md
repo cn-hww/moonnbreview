@@ -17,6 +17,8 @@ moon run --deny-warn scripts/ci-review.mbtx REPOSITORY BASE_SHA PROPOSED_SHA MAN
 Policy/gate are optional. `--target wasm` is the default; `--target native` also
 executes the installed native toolchain. This orchestration script itself runs
 through Moon's Wasm script runtime. Git, Moon and dependencies must be available.
+Replace the manifest argument with `--discover` to select all changed lowercase
+`.ipynb` files between the pinned endpoint commits. See [automatic discovery](git-discovery.md).
 Repo-relative notebook paths are read from pinned Git objects; the manifest and
 configuration files are read from the caller's filesystem. Two symbolic refs are
 resolved sequentially before notebook loading; full SHAs avoid caller ambiguity.
@@ -28,8 +30,9 @@ The new directory contains UTF-8 files without shell redirection:
 
 | File | Meaning |
 | --- | --- |
-| `bundle.json` | Complete batch-bundle-1, including recorded input failures |
-| `report.json` | Recomputed complete batch-1 evidence and gate outcome |
+| `bundle.json` | Complete batch-bundle-1/2, including recorded input failures |
+| `manifest.json` | Frozen explicit or discovered manifest-1/2 used for capture |
+| `report.json` | Recomputed complete batch-1/2 evidence and gate outcome |
 | `review.md` | All pair outcomes and bounded focused value previews |
 | `junit.xml` | CI testcase projection retaining complete per-pair evidence |
 | `provenance.json` | Resolved old/new commit IDs, manifest filename and backend |
@@ -50,8 +53,10 @@ directory; require `run.json` with `complete: true` before consuming a run. This
 not a transactional or durable filesystem writer. No source notebooks are written.
 
 [The manual GitHub workflow](../.github/workflows/notebook-review.yml) is runnable
-through Actions → notebook-review → Run workflow. Its defaults intentionally fail
-the gate with exit 1 and still upload artifacts using `if: always()`. Adapt the
+through Actions → notebook-review → Run workflow. Its default `--discover` with
+HEAD/HEAD produces an empty passing review; select meaningful base/proposed refs
+or an explicit manifest. Blocked/error results still upload artifacts using
+`if: always()`. Adapt the
 manifest/configuration and revision selection to your project. For untrusted PRs,
 run a trusted tool checkout with read-only permissions and pass revisions as data.
 This workflow uploads full notebook evidence; use repository-appropriate retention.

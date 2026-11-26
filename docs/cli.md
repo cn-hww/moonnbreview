@@ -9,7 +9,7 @@ File entries support Wasm, Wasm-GC, JS and native. Git entries support Wasm/nati
 | `main` | `review|check|bundle OLD NEW`; `replay BUNDLE` |
 | `batch` | `review|check|bundle MANIFEST`; `replay BATCH_BUNDLE` |
 | `git-review` | `review|check|bundle REPO OLD_REF NEW_REF OLD_PATH` |
-| `git-batch` | `review|check|bundle REPO OLD_REF NEW_REF MANIFEST` |
+| `git-batch` | `review|check|bundle REPO OLD_REF NEW_REF [MANIFEST]`; `discover REPO OLD_REF NEW_REF` |
 
 `--policy FILE` works on review/check/bundle. File-single review also accepts
 `--ignore-execution-counts` and repeatable `--ignore-metadata KEY`; these cannot be
@@ -32,6 +32,8 @@ review/check/bundle and explicitly identifies a proposed path after a rename.
 Git entries do not implement replay; their bundles are consumed by the matching
 file entry. Bundles have a fixed JSON schema and refuse `--format`. Flag values,
 duplicates and conflicting scopes are checked; unknown arguments are errors.
+Git batch discovers changed `.ipynb` paths when MANIFEST is omitted; discovery-only
+accepts no report/configuration flags. Explicit file/Git batches accept manifest-1/2.
 Single count-suppression flags are idempotent; metadata keys must be unique.
 
 | Operation | Exit 0 | Exit 1 | Exit 2 |

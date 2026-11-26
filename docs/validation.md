@@ -258,3 +258,16 @@ one Git block executes real committed additions/deletions/modifications. Totals:
 141 Wasm/native, 129 JS, 126 Wasm-GC (three async blocks skipped on Wasm-GC).
 The real-data file CLI verifier runs JSON, Markdown, JUnit, offline replay and
 0/1/2 on all four backends, retaining unchanged fixtures and existing v1 behavior.
+
+## Automatic Git selection (2026-11-26)
+
+Three private parser blocks check NUL framing, A/D/M/T handling, selection scope,
+deterministic order, duplicate/unknown/unsafe-path refusal, 64/65 bounds and recovery.
+Four actual-Git blocks cover a mixed add/delete/edit PR, Unicode/shell-character
+paths, unchanged/unrelated files, nested cwd and diff config overrides, dirty-state
+invariants, rename/suffix transitions, pinned refs, malformed new notebooks and
+symlink/UTF-8 refusals with later valid evidence. Totals: 148 Wasm/native;
+JS 129 and Wasm-GC 126 unchanged (Git is Wasm/native only).
+The real-data Git verifier checks discovery-only output, implicit/explicit plans,
+full report/bundle/Markdown/JUnit replay, frozen CI selection, empty passing batches,
+archived failures and unchanged dirty repository state on both supported backends.

@@ -13,6 +13,7 @@ import {
 pub struct Revisions {
   // private fields
 }
+pub async fn Revisions::discover(Self) -> @moonnbreview.FileManifest
 pub fn Revisions::new_commit(Self) -> String
 pub fn Revisions::old_commit(Self) -> String
 pub async fn Revisions::resolve(String, String, String) -> Self

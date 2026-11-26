@@ -23,6 +23,8 @@ and the optional Git snapshot/batch library/CLI; async source tests exercise its
 runtime on Wasm, JS and native (the current runner skips async tests on Wasm-GC).
 Git is an external process prerequisite,
 not bundled source; command behavior references are linked in [Git workflow](docs/git.md).
+Notebook discovery follows Git's documented `diff --name-status -z` framing,
+with rename/external/text conversion disabled; no Git implementation was copied.
 Dependencies are fetched by Moon and are not vendored into this repository.
 
 External fixture: Jupyter nbformat's `tests/test4.ipynb`, BSD-3-Clause, pinned to

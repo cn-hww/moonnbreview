@@ -238,5 +238,59 @@ async fn main {
   assert_eq(@fs.read_file(dir + "/.git/index").binary(), rename_index)
   assert_eq(git(dir, ["status", "--porcelain=v1"]), rename_status)
   assert_eq(@fs.read_file(dir + "/" + renamed).text(), "dirty renamed notebook")
+  // A real three-file PR: add a notebook, delete a notebook, edit a notebook.
+  ignore(git(dir,["restore","--staged","--worktree","--",renamed]))
+  @fs.write_file(dir+"/removed.ipynb",before)
+  @fs.write_file(dir+"/"+renamed,before)
+  ignore(git(dir,["add","--all"]));ignore(git(dir,["commit","--quiet","-m","lifecycle baseline"]))
+  ignore(git(dir,["rm","--","removed.ipynb"]))
+  let added_path="notebooks/新增 [3] $(review).ipynb"
+  @fs.write_file(dir+"/"+added_path,after)
+  @fs.write_file(dir+"/"+renamed,after)
+  @fs.write_file(dir+"/unrelated.txt","not a notebook")
+  ignore(git(dir,["add","--all"]));ignore(git(dir,["commit","--quiet","-m","lifecycle proposed"]))
+  let discovery_head=git(dir,["rev-parse","HEAD"])
+  let discovery_index=@fs.read_file(dir+"/.git/index").binary()
+  @fs.write_file(dir+"/"+renamed,"dirty content must not be read")
+  let discovery_status=git(dir,["status","--porcelain=v1"])
+  let discovered=cli(target,"cmd/git-batch",["discover",dir,"HEAD~1","HEAD"],0)
+  guard @json.parse(discovered) is Object(selected) && selected["pairs"] is Array(pairs) else { fail("missing discovery manifest") }
+  assert_eq(selected["format"],Json("moonnbreview/manifest-2"));assert_eq(pairs.length(),3)
+  @fs.write_file(manifest_path,discovered)
+  let automatic=["check",dir,"HEAD~1","HEAD","--policy","fixtures/policy.json"]
+  let auto_report=cli(target,"cmd/git-batch",automatic,1)
+  let explicit=["check",dir,"HEAD~1","HEAD",manifest_path,"--policy","fixtures/policy.json"]
+  assert_eq(auto_report,cli(target,"cmd/git-batch",explicit,1))
+  let auto_capture=automatic.copy();auto_capture[0]="bundle"
+  @fs.write_file(bundle_path,cli(target,"cmd/git-batch",auto_capture,0))
+  assert_eq(cli(target,"cmd/batch",["replay",bundle_path],1),auto_report)
+  for format in ["markdown","junit"] {
+    let argv=automatic.copy();argv.push("--format");argv.push(format)
+    assert_eq(cli(target,"cmd/git-batch",argv,1),cli(target,"cmd/batch",["replay",bundle_path,"--format",format],1))
+  }
+  let auto_artifacts=artifacts+"/automatic"
+  pipeline(target,dir,"--discover",auto_artifacts,1)
+  assert_eq(@fs.read_file(auto_artifacts+"/manifest.json").text(),discovered)
+  assert_eq(@fs.read_file(auto_artifacts+"/report.json").text(),auto_report)
+  assert_eq(@fs.read_file(auto_artifacts+"/bundle.json").text(),@fs.read_file(bundle_path).text())
+  pipeline(target,dir,"--discover",artifacts+"/automatic-empty",0,old_revision="HEAD")
+  ignore(cli(target,"cmd/git-batch",["check",dir,"HEAD","HEAD"],0))
+  for extra in [["--policy","fixtures/policy.json"],["--format","json"],["unexpected.json"]] {
+    let bad=["discover",dir,"HEAD~1","HEAD"]
+    for arg in extra { bad.push(arg) }
+    ignore(cli(target,"cmd/git-batch",bad,2))
+  }
+  assert_eq(git(dir,["rev-parse","HEAD"]),discovery_head)
+  assert_eq(@fs.read_file(dir+"/.git/index").binary(),discovery_index)
+  assert_eq(git(dir,["status","--porcelain=v1"]),discovery_status)
+  assert_eq(@fs.read_file(dir+"/"+renamed).text(),"dirty content must not be read")
+  ignore(git(dir,["restore","--staged","--worktree","--",renamed]))
+  @fs.write_file(dir+"/"+added_path,"{malformed")
+  ignore(git(dir,["add","--all"]));ignore(git(dir,["commit","--quiet","-m","malformed proposed notebook"]))
+  let auto_error=cli(target,"cmd/git-batch",automatic,2)
+  assert_true(auto_error.contains("parse_new"))
+  let error_artifacts=artifacts+"/automatic-errors"
+  pipeline(target,dir,"--discover",error_artifacts,2)
+  assert_eq(@fs.read_file(error_artifacts+"/report.json").text(),auto_error)
   println("Git revision workflow passed on " + target + "; HEAD, index and notebook worktree unchanged.")
 }

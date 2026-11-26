@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Automatic changed-Notebook discovery between pinned Git endpoints, optional
+  manifests on Git batch commands, explicit add/delete rename representation,
+  frozen CI manifest snapshots and empty/error review handling.
+
 - Explicit whole-Notebook addition/deletion comparisons and nullable manifest-2,
   batch-2 and replay bundles; existing v1 inputs/outputs remain compatible.
 - File/Git batch CLI support, surviving-path JUnit mapping and complete file
