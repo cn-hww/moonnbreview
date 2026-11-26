@@ -4,6 +4,17 @@ fn read(path : String) -> String raise {
 }
 
 ///|
+// Let Node drain asynchronous stdout before a nonzero exit.
+#cfg(target="js")
+extern "js" fn finish(code : Int32) -> Unit = "(code) => { process.exitCode = code; }"
+
+///|
+#cfg(not(target="js"))
+fn finish(code : Int32) -> Unit {
+  @env.exit(code)
+}
+
+///|
 #cfg(target="js")
 fn arguments() -> Array[String] {
   @env.args()[1:].to_owned()
@@ -199,13 +210,13 @@ fn main {
     }
     println(text)
     if command == "check" && !comparison.passes(blocked=gate.blocked()) {
-      @env.exit(1)
+      finish(1)
     }
   } catch {
     e => {
       // Error strings are JSON escaped by Debug; terminal control bytes are not emitted.
       println("\{Repr(e)}")
-      @env.exit(2)
+      finish(2)
     }
   }
 }

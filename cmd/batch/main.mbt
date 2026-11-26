@@ -4,6 +4,18 @@ fn read(path : String) -> String raise {
 }
 
 ///|
+// process.exit() can truncate large piped JSON/XML on Unix. Set the exit code
+// and return normally, retaining all queued stdout writes.
+#cfg(target="js")
+extern "js" fn finish(code : Int32) -> Unit = "(code) => { process.exitCode = code; }"
+
+///|
+#cfg(not(target="js"))
+fn finish(code : Int32) -> Unit {
+  @env.exit(code)
+}
+
+///|
 #cfg(target="js")
 fn arguments() -> Array[String] {
   @env.args()[1:].to_owned()
@@ -114,7 +126,8 @@ fn main {
     if args[1] == "replay" {
       let replay = @review.BatchReview::from_bundle(read(args[2]))
       println(render(replay, output_format.unwrap_or("json"), focus_changes))
-      @env.exit(replay.exit_code())
+      finish(replay.exit_code())
+      return
     }
     let policy = match policy_path {
       Some(path) => @review.Policy::from_json(read(path))
@@ -139,12 +152,12 @@ fn main {
     )
     let code = report.exit_code()
     if code == 2 || (args[1] == "check" && code != 0) {
-      @env.exit(code)
+      finish(code)
     }
   } catch {
     e => {
       println("\{Repr(e)}")
-      @env.exit(2)
+      finish(2)
     }
   }
 }

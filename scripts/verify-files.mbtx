@@ -8,8 +8,8 @@ import {
   "tc-adventureking/junit_delta@0.4.0" @codec,
 }
 ----
-async fn cli(target : String, args : Array[String], expected : Int) -> String {
-  let argv = ["run","--deny-warn","--target",target,"cmd/batch","--"]
+async fn cli(target : String, args : Array[String], expected : Int, entry~ : String = "cmd/batch") -> String {
+  let argv = ["run","--deny-warn","--target",target,entry,"--"]
   for arg in args { argv.push(arg) }
   let result = @shell.Cmd("moon",argv).output()
   guard result.exit_code() == expected else { println(result.stdout());println(result.stderr());fail("unexpected file lifecycle CLI exit") }
@@ -55,6 +55,31 @@ async fn main {
   @fs.write_file(invalid,( {"format":"moonnbreview/manifest-2","pairs":[{"id":"missing","old":null,"new":Json(dir+"/missing.ipynb")},{"id":"recovery","old":"fixtures/before.ipynb","new":null}]}:Json).stringify())
   let failure=cli(target,["check",invalid],2)
   assert_true(failure.contains("read_new") && failure.contains("\"status\":\"blocked\""))
+  if target=="js" {
+    // Exceed typical Unix pipe buffers; forced process.exit used to truncate
+    // complete library results after println on exit 1 and exit 2.
+    guard @json.parse(@fs.read_file("fixtures/before.ipynb").text()) is Object(book) && book["cells"] is Array(cells) && cells[0] is Object(first) else { fail("bad real fixture") }
+    let left="LEFT:"+"x".repeat(160000)
+    let right="RIGHT:"+"y".repeat(160000)
+    first["source"]=Json(left)
+    let old_path=dir+"/large-old.ipynb"
+    let new_path=dir+"/large-new.ipynb"
+    @fs.write_file(old_path,Json(book).stringify())
+    first["source"]=Json(right)
+    @fs.write_file(new_path,Json(book).stringify())
+    guard @json.parse(cli(target,["check",old_path,new_path],1,entry="cmd/main")) is Object(single) && single["changes"] is Array(changes) && changes[0] is Object(change) else { fail("truncated single-file JSON") }
+    assert_eq(change["before"],Json(left));assert_eq(change["after"],Json(right))
+    let errors : Json={"format":"moonnbreview/manifest-2","pairs":[{"id":"large","old":null,"new":Json(new_path)},{"id":"missing","old":null,"new":Json(dir+"/gone.ipynb")}]}
+    @fs.write_file(invalid,errors.stringify())
+    let error_report=cli(target,["check",invalid],2)
+    guard @json.parse(error_report) is Object(error_root) && error_root["results"] is Array(results) else { fail("truncated error-bearing JSON") }
+    assert_eq(results.length(),2)
+    @fs.write_file(bundle,cli(target,["bundle",invalid],2))
+    assert_eq(cli(target,["replay",bundle],2),error_report)
+    let xml=cli(target,["replay",bundle,"--format","junit"],2)
+    let suite=@codec.JUnitDocument::from_xml(xml).root
+    assert_eq(suite.attribute("tests"),Some("2"));assert_eq(suite.attribute("errors"),Some("1"))
+  }
   assert_eq(@fs.read_file("fixtures/before.ipynb").binary(),before)
   assert_eq(@fs.read_file("fixtures/after.ipynb").binary(),after)
   println("Whole-file lifecycle and replay passed on "+target)
