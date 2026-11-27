@@ -1,5 +1,9 @@
 # Fixture provenance and reproducible demonstration
 
+The additional 12 original notebooks and five clearly prepared derivatives,
+their sources, licenses, hashes and accepted/refused matrix are in
+[corpus/README.md](corpus/README.md).
+
 `upstream/test4.ipynb` is an unmodified Jupyter nbformat test notebook, downloaded
 from:
 

@@ -6,7 +6,7 @@ File entries support Wasm, Wasm-GC, JS and native. Git entries support Wasm/nati
 
 | Entry | Commands and positional arguments |
 | --- | --- |
-| `main` | `review|check|bundle OLD NEW`; `replay BUNDLE` |
+| `main` | `review|check|bundle OLD NEW`; `replay BUNDLE`; `validate NOTEBOOK` |
 | `batch` | `review|check|bundle MANIFEST`; `replay BATCH_BUNDLE` |
 | `git-review` | `review|check|bundle REPO OLD_REF NEW_REF OLD_PATH` |
 | `git-batch` | `review|check|bundle REPO OLD_REF NEW_REF [MANIFEST]`; `discover REPO OLD_REF NEW_REF` |
@@ -51,3 +51,8 @@ keep valid evidence on failure, rather than depending on shell redirection encod
 Notebook acceptance, normalization, resource limits, policy semantics and format
 limitations remain those documented in [README](../README.md). A passing gate is
 not a claim of notebook execution correctness, trust or approval.
+# Source hunks
+
+All four CLIs accept `--source-hunks` for Markdown review/check (and file/batch
+replay). This exhaustive paired-source view excludes `--focus-changes`. See
+[source hunk semantics and limits](source-hunks.md).

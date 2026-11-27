@@ -43,12 +43,14 @@ fn main {
         (
           #|MoonNBReview 0.1.0 — notebook file review
           #|review|check|bundle OLD NEW [--policy FILE]
+          #|validate NOTEBOOK (structured diagnostics; exit 0 accepted / 2 refused)
           #|replay BUNDLE [--format json|markdown|html]
           #|review/check: --format json|markdown|html
           #|check only: --gate FILE (blocking categories)
           #|Inline policy: --ignore-execution-counts; --ignore-metadata KEY (repeatable)
           #|--policy cannot be mixed with inline policy flags.
           #|--focus-changes requires Markdown; --group-mime requires HTML (each once).
+          #|--source-hunks shows every source edit in Markdown; excludes --focus-changes.
           #|Bundles have fixed JSON format. Replay accepts no policy/gate override.
           #|Exit: check 0 passed / 1 blocked / 2 invalid; review/bundle/replay 0 valid / 2 invalid.
           #|Reports go to stdout; inputs are never rewritten. See docs/cli.md.
@@ -60,6 +62,24 @@ fn main {
       println("moonnbreview 0.1.0")
       return
     }
+    if args.length() >= 2 && args[1] == "validate" {
+      guard args.length() == 3 else { fail("usage: validate NOTEBOOK.ipynb") }
+      match @review.Document::validate(read(args[2])) {
+        Ok(_) =>
+          println(
+            "{\"format\":\"moonnbreview/validation-1\",\"valid\":true,\"diagnostic\":null}",
+          )
+        Err(diagnostic) => {
+          println(
+            "{\"format\":\"moonnbreview/validation-1\",\"valid\":false,\"diagnostic\":" +
+            diagnostic.to_json() +
+            "}",
+          )
+          finish(2)
+        }
+      }
+      return
+    }
     guard args.length() >= 2 else {
       fail(
         "usage: review|check OLD NEW [--policy FILE] [--format json|markdown|html] | check ... --gate FILE | bundle OLD NEW [--policy FILE] | replay BUNDLE [--format json|markdown|html]",
@@ -68,6 +88,7 @@ fn main {
     let command = args[1]
     let mut format = "json"
     let mut focus_changes = false
+    let mut source_hunks = false
     let mut group_mime = false
     let mut gate_path : String? = None
     let comparison = if command == "replay" {
@@ -80,6 +101,10 @@ fn main {
       let mut i = 3
       while i < args.length() {
         match args[i] {
+          "--source-hunks" => {
+            guard !source_hunks else { fail("--source-hunks may occur once") }
+            source_hunks = true
+          }
           "--group-mime" => {
             guard !group_mime else { fail("--group-mime may occur once") }
             group_mime = true
@@ -115,6 +140,10 @@ fn main {
       let mut i = 4
       while i < args.length() {
         match args[i] {
+          "--source-hunks" => {
+            guard !source_hunks else { fail("--source-hunks may occur once") }
+            source_hunks = true
+          }
           "--group-mime" => {
             guard !group_mime else { fail("--group-mime may occur once") }
             group_mime = true
@@ -192,6 +221,12 @@ fn main {
         "--focus-changes requires --format markdown on review, check or replay",
       )
     }
+    guard !source_hunks ||
+      (format == "markdown" && command != "bundle" && !focus_changes) else {
+      fail(
+        "--source-hunks requires Markdown review/check/replay and excludes --focus-changes",
+      )
+    }
     let gate = match gate_path {
       Some(path) => @review.Gate::from_json(read(path))
       None => @review.Gate::new()
@@ -202,7 +237,7 @@ fn main {
     let text = if command == "bundle" {
       comparison.to_bundle()
     } else if format == "markdown" {
-      comparison.to_markdown(focus_changes~)
+      comparison.to_markdown(focus_changes~, source_hunks~)
     } else if format == "html" {
       comparison.to_html(group_mime~)
     } else {

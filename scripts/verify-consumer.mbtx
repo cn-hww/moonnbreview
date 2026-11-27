@@ -77,6 +77,15 @@ async fn main {
     #|  assert_eq(c.suppressed().length(), 2)
     #|  assert_false(c.passes())
     #|  assert_eq(@review.Comparison::from_bundle(c.to_bundle()).to_json(), c.to_json())
+    #|  assert_true(c.to_markdown(source_hunks=true).contains("Source line hunks"))
+    #|  let mut has_source = false
+    #|  for change in c.changes() { if change.source_hunks() is Some(_) { has_source = true } }
+    #|  assert_true(has_source)
+    #|  assert_true(@review.Document::validate(before) is Ok(_))
+    #|  guard @review.Document::validate("{}") is Err(diagnostic) else { abort("missing public diagnostic") }
+    #|  assert_eq(diagnostic.code, "NB_VERSION")
+    #|  assert_eq(diagnostic.path, "/nbformat")
+    #|  assert_true(diagnostic.to_json().contains("moonnbreview/diagnostic-1"))
     #|  let m = @review.Manifest::new([{id:"lesson",old_path:"lesson.ipynb",new_path:"lesson.ipynb"}])
     #|  let b = m.review_sides(_ => before, _ => after, policy=p, retain_inputs=true)
     #|  assert_eq(b.exit_code(), 1)

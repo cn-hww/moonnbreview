@@ -12,6 +12,7 @@ async fn main {
           #|check/bundle only: --gate FILE
           #|review/check: --format json|junit|markdown
           #|--focus-changes requires Markdown and may occur once.
+          #|--source-hunks requires Markdown and excludes --focus-changes.
           #|Bundles have fixed JSON format; replay them with the file batch command.
           #|Both refs are pinned before serial pair loading. No checkout or rename inference.
           #|Exit: check 0 passed / 1 blocked / 2 errors; review/bundle 0 valid / 2 errors.
@@ -41,6 +42,7 @@ async fn main {
     let mut gate_path : String? = None
     let mut format : String? = None
     let mut focus_changes = false
+    let mut source_hunks = false
     let manifest_path = if args.length() > 5 && !args[5].has_prefix("--") {
       Some(args[5])
     } else {
@@ -48,6 +50,12 @@ async fn main {
     }
     let mut i = if manifest_path is Some(_) { 6 } else { 5 }
     while i < args.length() {
+      if args[i] == "--source-hunks" {
+        guard !source_hunks else { fail("--source-hunks may occur once") }
+        source_hunks = true
+        i += 1
+        continue
+      }
       if args[i] == "--focus-changes" {
         guard !focus_changes else { fail("--focus-changes may occur once") }
         focus_changes = true
@@ -87,6 +95,11 @@ async fn main {
       Some(path) => @review.Policy::from_json(@fs.read_file(path).text())
       None => @review.Policy::new()
     }
+    guard !source_hunks || (format == Some("markdown") && !focus_changes) else {
+      fail(
+        "--source-hunks requires Markdown review/check and excludes --focus-changes",
+      )
+    }
     let gate = match gate_path {
       Some(path) => @review.Gate::from_json(@fs.read_file(path).text())
       None => @review.Gate::new()
@@ -113,7 +126,7 @@ async fn main {
       } else if format == Some("junit") {
         @junit.render(batch)
       } else if format == Some("markdown") {
-        batch.to_markdown(focus_changes~)
+        batch.to_markdown(focus_changes~, source_hunks~)
       } else {
         batch.to_json()
       },

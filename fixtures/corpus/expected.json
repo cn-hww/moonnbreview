@@ -1,0 +1,243 @@
+[
+  {
+    "path": "fixtures/corpus/test4.5.ipynb",
+    "git_blob_sha1": "f1f18423e177874825431869c5a7d8d522e0e077",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": true,
+      "diagnostic": null
+    }
+  },
+  {
+    "path": "fixtures/corpus/test4custom.ipynb",
+    "git_blob_sha1": "a3dab5c52765950292bcf732d20eda4656bf329b",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_VERSION",
+        "hint": "Convert older files explicitly and assign stable IDs; newer versions require separate compatibility review",
+        "line": null,
+        "path": "/nbformat_minor",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "require nbformat 4.5"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/test4plus.ipynb",
+    "git_blob_sha1": "2b61a123ce9dc05a26ed5797f7e81d194d6cadf6",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_VERSION",
+        "hint": "Convert older files explicitly and assign stable IDs; newer versions require separate compatibility review",
+        "line": null,
+        "path": "/nbformat_minor",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "require nbformat 4.5"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/test4jupyter_metadata_timings.ipynb",
+    "git_blob_sha1": "cf87477e186f180fe5a5ec8be08ba3f968ac40ba",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_VERSION",
+        "hint": "Convert older files explicitly and assign stable IDs; newer versions require separate compatibility review",
+        "line": null,
+        "path": "/nbformat_minor",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "require nbformat 4.5"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/many_tracebacks.ipynb",
+    "git_blob_sha1": "a37eda86130c66f486523b2a53ce0f8ee4695ceb",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_VERSION",
+        "hint": "Convert older files explicitly and assign stable IDs; newer versions require separate compatibility review",
+        "line": null,
+        "path": "/nbformat_minor",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "require nbformat 4.5"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/invalid_cell_id.ipynb",
+    "git_blob_sha1": "1ffbcb7ad73087f145431a16bde9b65b5f4674df",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_FIELD",
+        "hint": "Supply the required field/type in the producer; preserve existing payloads",
+        "line": null,
+        "path": "/cells/0/id",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "$.cells[0].id: expected cell ID of 1 to 64 ASCII letters, digits, '-' or '_'"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/invalid_unique_cell_id.ipynb",
+    "git_blob_sha1": "9c96a01b830064e6be75fd17e9b5f94e0f1716d5",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_CELL_ID_DUPLICATE",
+        "hint": "Assign a unique stable identity in the producer; automatic ID generation is disabled",
+        "line": null,
+        "path": "/cells/1/id",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "duplicate cell identity \"dup\""
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/v4_5_invalid_metadata.ipynb",
+    "git_blob_sha1": "d96de05106d9edbf5dd0f5dfc8659409fc23e6fc",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_FIELD",
+        "hint": "Supply the required field/type in the producer; preserve existing payloads",
+        "line": null,
+        "path": "/metadata/kernelspec",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "$.metadata.kernelspec: expected object"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/v4_5_no_cell_id.ipynb",
+    "git_blob_sha1": "3465d4eb20430bcc91dae2a19ad13210f6267dd7",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_FIELD",
+        "hint": "Supply the required field/type in the producer; preserve existing payloads",
+        "line": null,
+        "path": "/cells/0/id",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "$.cells[0].id: expected required cell ID in nbformat 4.5 and later"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/test3.ipynb",
+    "git_blob_sha1": "c20e1608a60a3f8195749107e5981d4f9240a0a8",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_VERSION",
+        "hint": "Convert older files explicitly and assign stable IDs; newer versions require separate compatibility review",
+        "line": null,
+        "path": "/nbformat",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "require nbformat 4.5"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/notebook-running-code.ipynb",
+    "git_blob_sha1": "c9321326013254eda32ddb6f6497030d99448909",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_VERSION",
+        "hint": "Convert older files explicitly and assign stable IDs; newer versions require separate compatibility review",
+        "line": null,
+        "path": "/nbformat_minor",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "require nbformat 4.5"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/notebook-markdown.ipynb",
+    "git_blob_sha1": "82f6864bdaa2dfac337aca8ca48da2307b3f32c1",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": false,
+      "diagnostic": {
+        "code": "NB_VERSION",
+        "hint": "Convert older files explicitly and assign stable IDs; newer versions require separate compatibility review",
+        "line": null,
+        "path": "/nbformat_minor",
+        "column": null,
+        "format": "moonnbreview/diagnostic-1",
+        "message": "require nbformat 4.5"
+      }
+    }
+  },
+  {
+    "path": "fixtures/corpus/test4custom-prepared.ipynb",
+    "git_blob_sha1": "3fd015c126fcadcbfcf601ec52d211d76c93ece1",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": true,
+      "diagnostic": null
+    }
+  },
+  {
+    "path": "fixtures/corpus/test4jupyter_metadata_timings-prepared.ipynb",
+    "git_blob_sha1": "456177aa92944e0bc0e081b2b1902c2717807359",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": true,
+      "diagnostic": null
+    }
+  },
+  {
+    "path": "fixtures/corpus/many_tracebacks-prepared.ipynb",
+    "git_blob_sha1": "2a275ccada6948e53ce0671bced9dd1638be46ac",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": true,
+      "diagnostic": null
+    }
+  },
+  {
+    "path": "fixtures/corpus/notebook-running-code-prepared.ipynb",
+    "git_blob_sha1": "e710fb345a1dbc8564e66fc3e3fffd300c11f3ad",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": true,
+      "diagnostic": null
+    }
+  },
+  {
+    "path": "fixtures/corpus/notebook-markdown-prepared.ipynb",
+    "git_blob_sha1": "a4779b9313e5f3a779429efcaac3d9cfc5834a48",
+    "validation": {
+      "format": "moonnbreview/validation-1",
+      "valid": true,
+      "diagnostic": null
+    }
+  }
+]

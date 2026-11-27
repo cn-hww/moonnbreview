@@ -271,3 +271,30 @@ JS 129 and Wasm-GC 126 unchanged (Git is Wasm/native only).
 The real-data Git verifier checks discovery-only output, implicit/explicit plans,
 full report/bundle/Markdown/JUnit replay, frozen CI selection, empty passing batches,
 archived failures and unchanged dirty repository state on both supported backends.
+
+## Source hunks, diagnostics and acceptance pack (2026-11-27)
+
+Six new source-hunk blocks cover separated edits, replay/default evidence,
+exact reconstruction of empty/LF/CRLF/Unicode/repeated lines, fresh arrays,
+budget rejection/recovery, batch rendering and the exact 200000-unit/4000-line
+boundaries including the core diff cutoff path. Five diagnostic blocks cover
+typed syntax/duplicate-key locations, escaped field pointers, identity/version
+refusals, numeric preservation, limits and recovery. Totals: **159 Wasm/native,
+140 JS, 137 Wasm-GC**, with the same three async blocks skipped on Wasm-GC.
+
+Local `scripts/verify.mbtx --portable` passed, including actual file/Git/batch
+CLI, 0/1/2 exits, line-hunk flags, replay and independent consumers. The acceptance
+pack executed Wasm, Wasm-GC and JS, each with 6 accepted / 11 refused corpus cases,
+canonical bundle idempotence, three distant source edits, cross-target report
+equality and recovery. Linux native executed all 159 tests with `--deny-warn`
+(Moon diagnostics); GCC emitted two warnings inside the existing third-party
+async runtime (`posix_spawn_file_actions_addchdir_np` declaration and unchecked
+`write` result). These are not warnings in project MoonBit code.
+The Linux native acceptance pack also executed all 17 corpus cases (6 accepted /
+11 refused), canonical round trips, the three-edit Markdown workflow and offline
+replay. Native execution is therefore verified, not inferred from compilation.
+
+The portable source-distribution check passed: 129 exact archive file paths and
+bytes, consumers executed from extracted contents, and generated API metadata.
+These results do not imply a Mooncakes publication. Per-run acceptance artifacts
+and completion markers distinguish the targets actually executed.

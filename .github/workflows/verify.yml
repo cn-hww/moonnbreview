@@ -27,5 +27,13 @@ jobs:
       - run: moon update
       - run: moon run --deny-warn scripts/verify.mbtx
       - run: moon run --deny-warn scripts/prepare-fixture.mbtx
+      - run: moon run --deny-warn scripts/prepare-corpus.mbtx
+      - run: moon run --deny-warn scripts/verify-acceptance.mbtx _build/acceptance
       - run: moon run --deny-warn scripts/verify-release.mbtx
       - run: git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: notebook-acceptance-${{ matrix.os }}
+          path: _build/acceptance
+          if-no-files-found: warn

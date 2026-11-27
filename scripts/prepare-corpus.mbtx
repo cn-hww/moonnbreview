@@ -1,0 +1,22 @@
+----
+import {
+  "moonbitlang/x@0.5.5/fs",
+  "moonbitlang/core/json",
+}
+----
+
+// Explicit fixture preparation, never part of Document::parse/validate. Retain
+// every payload and field; only set minor=5 and deterministic demo-only IDs.
+fn main raise {
+  for name in ["test4custom", "test4jupyter_metadata_timings", "many_tracebacks", "notebook-running-code", "notebook-markdown"] {
+    let source = @fs.read_file_to_string("fixtures/corpus/" + name + ".ipynb")
+    guard @json.parse(source, preserve_number_repr=true) is Object(root) && root["nbformat"] == Json(4) && root["cells"] is Array(cells) else { fail("unexpected source corpus shape") }
+    root["nbformat_minor"] = 5
+    for i, cell in cells {
+      guard cell is Object(fields) else { fail("expected cell object") }
+      fields["id"] = Json("corpus-demo-" + i.to_string())
+    }
+    @fs.write_string_to_file("fixtures/corpus/" + name + "-prepared.ipynb", Json(root).stringify(indent=1) + "\n")
+  }
+  println("Prepared 5 explicitly labeled demo derivatives; original corpus bytes unchanged.")
+}

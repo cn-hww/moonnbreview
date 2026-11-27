@@ -40,11 +40,12 @@ fn render(
   batch : @review.BatchReview,
   format : String,
   focus : Bool,
+  hunks : Bool,
 ) -> String raise {
   if format == "junit" {
     @junit.render(batch)
   } else if format == "markdown" {
-    batch.to_markdown(focus_changes=focus)
+    batch.to_markdown(focus_changes=focus, source_hunks=hunks)
   } else {
     batch.to_json()
   }
@@ -63,6 +64,7 @@ fn main {
           #|review/check: --format json|junit|markdown
           #|check/bundle only: --gate FILE (blocking categories)
           #|--focus-changes requires Markdown and may occur once.
+          #|--source-hunks requires Markdown and excludes --focus-changes.
           #|Bundles have fixed JSON format. Replay accepts no policy/gate override.
           #|Exit: check/replay 0 passed / 1 blocked / 2 errors; review/bundle 0 valid / 2 errors.
           #|Every pair is retained, including failures. See docs/cli.md.
@@ -84,8 +86,15 @@ fn main {
     let mut gate_path : String? = None
     let mut output_format : String? = None
     let mut focus_changes = false
+    let mut source_hunks = false
     let mut i = 3
     while i < args.length() {
+      if args[i] == "--source-hunks" {
+        guard !source_hunks else { fail("--source-hunks may occur once") }
+        source_hunks = true
+        i += 1
+        continue
+      }
       if args[i] == "--focus-changes" {
         guard !focus_changes else { fail("--focus-changes may occur once") }
         focus_changes = true
@@ -123,9 +132,19 @@ fn main {
     guard !focus_changes || output_format == Some("markdown") else {
       fail("--focus-changes requires --format markdown on review/check/replay")
     }
+    guard !source_hunks || (output_format == Some("markdown") && !focus_changes) else {
+      fail("--source-hunks requires Markdown and excludes --focus-changes")
+    }
     if args[1] == "replay" {
       let replay = @review.BatchReview::from_bundle(read(args[2]))
-      println(render(replay, output_format.unwrap_or("json"), focus_changes))
+      println(
+        render(
+          replay,
+          output_format.unwrap_or("json"),
+          focus_changes,
+          source_hunks,
+        ),
+      )
       finish(replay.exit_code())
       return
     }
@@ -147,7 +166,12 @@ fn main {
       if args[1] == "bundle" {
         report.to_bundle()
       } else {
-        render(report, output_format.unwrap_or("json"), focus_changes)
+        render(
+          report,
+          output_format.unwrap_or("json"),
+          focus_changes,
+          source_hunks,
+        )
       },
     )
     let code = report.exit_code()

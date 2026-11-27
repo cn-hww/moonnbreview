@@ -92,6 +92,11 @@ async fn main {
   for argv in [file_args, git_args] { argv.push("--format"); argv.push("markdown") }
   assert_eq(cli(target, "cmd/git-review", git_args, 1), cli(target, "cmd/main", file_args, 1))
   ignore(cli(target, "cmd/git-review", ["check", dir, "HEAD", "HEAD", path], 0))
+  let source_file = file_args.copy(); source_file.push("--source-hunks")
+  let source_git = git_args.copy(); source_git.push("--source-hunks")
+  assert_eq(cli(target, "cmd/git-review", source_git, 1), cli(target, "cmd/main", source_file, 1))
+  source_git.push("--focus-changes")
+  ignore(cli(target, "cmd/git-review", source_git, 2))
   let bundle = cli(target, "cmd/git-review", ["bundle", dir, "HEAD~1", "HEAD", path, "--policy", "fixtures/policy.json"], 0)
   let artifacts = @fs.tmpdir(prefix="nbreview-git-artifacts-")
   defer @fs.rmdir(artifacts, recursive=true)
@@ -120,6 +125,11 @@ async fn main {
   let batch_markdown = batch_args.copy()
   for arg in ["--format", "markdown", "--focus-changes"] { batch_markdown.push(arg) }
   assert_eq(cli(target, "cmd/git-batch", batch_markdown, 1), cli(target, "cmd/batch", ["replay", bundle_path, "--format", "markdown", "--focus-changes"], 1))
+  let batch_hunks = batch_args.copy()
+  for arg in ["--format", "markdown", "--source-hunks"] { batch_hunks.push(arg) }
+  assert_eq(cli(target, "cmd/git-batch", batch_hunks, 1), cli(target, "cmd/batch", ["replay", bundle_path, "--format", "markdown", "--source-hunks"], 1))
+  batch_hunks.push("--focus-changes")
+  ignore(cli(target, "cmd/git-batch", batch_hunks, 2))
   let captured_dir = artifacts + "/CI artifacts 课程"
   pipeline(target, dir, manifest_path, captured_dir, 1)
   assert_eq(@fs.read_file(captured_dir + "/report.json").text(), batch)

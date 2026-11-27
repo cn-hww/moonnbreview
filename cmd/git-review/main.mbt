@@ -10,6 +10,7 @@ async fn main {
           #|--policy FILE; check only: --gate FILE
           #|review/check: --format json|markdown|html
           #|--focus-changes requires Markdown; --group-mime requires HTML (each once).
+          #|--source-hunks requires Markdown and excludes --focus-changes.
           #|Bundles have fixed JSON format; replay them with the file command.
           #|Paths are literal and repository-root-relative. No rename inference or checkout.
           #|Exit: check 0 passed / 1 blocked / 2 invalid; review/bundle 0 valid / 2 invalid.
@@ -30,6 +31,7 @@ async fn main {
     let mut policy_path : String? = None
     let mut format : String? = None
     let mut focus_changes = false
+    let mut source_hunks = false
     let mut group_mime = false
     let mut gate_path : String? = None
     let mut new_path : String? = None
@@ -38,6 +40,12 @@ async fn main {
       if args[i] == "--group-mime" {
         guard !group_mime else { fail("--group-mime may occur once") }
         group_mime = true
+        i += 1
+        continue
+      }
+      if args[i] == "--source-hunks" {
+        guard !source_hunks else { fail("--source-hunks may occur once") }
+        source_hunks = true
         i += 1
         continue
       }
@@ -84,6 +92,12 @@ async fn main {
       Some(path) => @review.Policy::from_json(@fs.read_file(path).text())
       None => @review.Policy::new()
     }
+    guard !source_hunks ||
+      (format == Some("markdown") && args[1] != "bundle" && !focus_changes) else {
+      fail(
+        "--source-hunks requires Markdown review/check and excludes --focus-changes",
+      )
+    }
     guard !group_mime || (format == Some("html") && args[1] != "bundle") else {
       fail("--group-mime requires --format html on review or check")
     }
@@ -101,7 +115,7 @@ async fn main {
     let text = if args[1] == "bundle" {
       comparison.to_bundle()
     } else if format == Some("markdown") {
-      comparison.to_markdown(focus_changes~)
+      comparison.to_markdown(focus_changes~, source_hunks~)
     } else if format == Some("html") {
       comparison.to_html(group_mime~)
     } else {

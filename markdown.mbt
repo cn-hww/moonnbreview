@@ -155,6 +155,7 @@ fn MarkdownWriter::change(
   number : Int32,
   preview_chars : Int32,
   focus_changes : Bool,
+  source_hunks : Bool,
   heading~ : String = "###",
 ) -> Unit raise ReviewError {
   self.write(
@@ -170,6 +171,12 @@ fn MarkdownWriter::change(
     }),
     "json",
   )
+  if source_hunks {
+    if change.source_hunks() is Some(hunks) {
+      self.source(hunks)
+      return
+    }
+  }
   let (start, focused) = match (change.before, change.after) {
     (Some(String(a)), Some(String(b))) if focus_changes =>
       (preview_start(a, b, preview_chars), true)
@@ -189,11 +196,17 @@ fn MarkdownWriter::change(
 /// Set focus_changes=true to center paired string previews near their first
 /// difference, with exact original offsets and LF-based line/UTF-16 columns.
 /// This is a bounded first-difference view, not an exhaustive text diff.
+/// source_hunks=true instead shows every paired /source line edit with context;
+/// it excludes focus_changes. Other witness types retain bounded previews.
 pub fn Comparison::to_markdown(
   self : Comparison,
   preview_chars~ : Int32 = 240,
   focus_changes~ : Bool = false,
+  source_hunks~ : Bool = false,
 ) -> String raise ReviewError {
+  guard !(source_hunks && focus_changes) else {
+    raise Invalid("source_hunks and focus_changes are mutually exclusive")
+  }
   guard preview_chars >= 32 && preview_chars <= 4096 else {
     raise Invalid("preview_chars must be 32..4096; use JSON for full evidence")
   }
@@ -225,7 +238,7 @@ pub fn Comparison::to_markdown(
       out.write("None.\n\n")
     }
     for i, change in items {
-      out.change(change, i + 1, preview_chars, focus_changes)
+      out.change(change, i + 1, preview_chars, focus_changes, source_hunks)
     }
   }
   out.buffer.to_string()

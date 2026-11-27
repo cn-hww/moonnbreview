@@ -186,6 +186,16 @@ Rich payloads are compared as data; no HTML, JavaScript or notebook code execute
 
 ## Validation and development
 
+For all source edits within a cell, use Markdown `--source-hunks`; see
+[line hunk API and limits](docs/source-hunks.md). `validate FILE.ipynb` returns
+[structured refusal codes, locations and repair hints](docs/diagnostics.md).
+The [public corpus and executable acceptance pack](docs/acceptance.md) records
+actual accepted/refused cases and full replay evidence on selected backends:
+
+```sh
+moon run --deny-warn scripts/verify-acceptance.mbtx _build/my-acceptance
+```
+
 `moon run --deny-warn scripts/verify.mbtx` runs formatting, generated-interface
 updates, strict all-target checking, public API tests, real-data CLI checks,
 0/1/2 exit behavior and bundle replay on wasm, wasm-gc, js and native. Node and a
@@ -200,7 +210,7 @@ Wasm-GC and JS when a native compiler is unavailable; it does not validate nativ
 execution.
 `scripts/verify.mbtx --native` executes only the native tests and CLI checks.
 
-The pinned upstream Jupyter fixture, its full BSD license and the clearly
+The pinned upstream Jupyter fixtures, their full BSD licenses and the clearly
 documented derived examples are under [fixtures](fixtures/README.md).
 Implementation, own tests and automation are MIT; see [THIRD_PARTY.md](THIRD_PARTY.md)
 for dependencies, external data and design references.

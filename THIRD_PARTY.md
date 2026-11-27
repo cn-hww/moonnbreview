@@ -27,10 +27,22 @@ Notebook discovery follows Git's documented `diff --name-status -z` framing,
 with rename/external/text conversion disabled; no Git implementation was copied.
 Dependencies are fetched by Moon and are not vendored into this repository.
 
+Source hunk rendering reuses `moonbitlang/core/diff` (Apache-2.0) Myers and hunk
+grouping APIs. Notebook-specific locations, budgets and presentation are authored
+here; no generic diff implementation or upstream test was copied.
+
 External fixture: Jupyter nbformat's `tests/test4.ipynb`, BSD-3-Clause, pinned to
 `2b47b4bd5ed70799a2ea8fcf390fa680ee120910`. Full license and modification notes:
 [fixtures/README.md](fixtures/README.md). Synthetic unit-test inputs are authored
 here, not extracted from another test suite.
+
+The extended [public corpus](fixtures/corpus/README.md) adds ten unchanged
+nbformat test notebooks from the same pinned revision and two official Notebook
+examples from `jupyter/notebook@5bc2024fa0453ef28039749e8ea036e0dcbb734f`,
+all BSD-3-Clause. Full licenses, original links, exact file hashes and five
+explicit preparation transformations are recorded there. No upstream test code
+was copied. Acceptance source revisions are labeled simulations, not upstream
+changes or executed Notebook results.
 
 Design references: [nbdime](https://github.com/jupyter/nbdime) (BSD-3-Clause),
 [Jupyter format specification](https://nbformat.readthedocs.io/en/latest/format_description.html),

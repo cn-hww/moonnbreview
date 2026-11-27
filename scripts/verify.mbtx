@@ -75,7 +75,7 @@ async fn main {
   let args = @env.args()
   guard args.length() == 1 || args == [args[0], "--portable"] || args == [args[0], "--native"] else { fail("usage: verify.mbtx [--portable|--native]") }
   let targets = if args.length() == 2 && args[1] == "--portable" { ["wasm", "wasm-gc", "js"] } else if args.length() == 2 { ["native"] } else { ["wasm", "wasm-gc", "js", "native"] }
-  for path in ["scripts/verify.mbtx", "scripts/prepare-fixture.mbtx", "scripts/verify-git.mbtx", "scripts/ci-review.mbtx", "scripts/verify-consumer.mbtx", "scripts/verify-release.mbtx", "scripts/verify-files.mbtx"] {
+  for path in ["scripts/verify.mbtx", "scripts/prepare-fixture.mbtx", "scripts/prepare-corpus.mbtx", "scripts/verify-acceptance.mbtx", "scripts/verify-git.mbtx", "scripts/ci-review.mbtx", "scripts/verify-consumer.mbtx", "scripts/verify-release.mbtx", "scripts/verify-files.mbtx"] {
     ignore(command(["fmt", path], 0))
   }
   for args in [["fmt"], ["info"], ["check", "--target", "all", "--deny-warn"]] {
@@ -241,6 +241,13 @@ async fn main {
       None => batch_markdown_baseline = Some(batch_markdown)
       Some(value) => { assert_eq(batch_markdown, value) }
     }
+    let batch_hunks = batch_markdown_args.copy()
+    batch_hunks.push("--source-hunks")
+    let batch_hunks_replay = batch_md_replay.copy()
+    batch_hunks_replay.push("--source-hunks")
+    assert_eq(console_text(command(batch_hunks, 1)), console_text(command(batch_hunks_replay, 1)))
+    batch_hunks.push("--focus-changes")
+    ignore(command(batch_hunks, 2))
     batch_markdown_args.push("--focus-changes")
     batch_md_replay.push("--focus-changes")
     let batch_focused = console_text(command(batch_markdown_args, 1))
@@ -360,6 +367,18 @@ async fn main {
     let focused_replay = replay.copy()
     for arg in ["--focus-changes", "--format", "markdown"] { focused_replay.push(arg) }
     assert_eq(console_text(command(focused_replay, 0)), focused)
+    let hunks_review = prefix.copy()
+    for arg in ["review", "fixtures/before.ipynb", "fixtures/after.ipynb", "--policy", "fixtures/policy.json", "--format", "markdown", "--source-hunks"] { hunks_review.push(arg) }
+    let hunks = console_text(command(hunks_review, 0))
+    assert_true(hunks.contains("Source line hunks"))
+    let hunks_replay = replay.copy()
+    for arg in ["--format", "markdown", "--source-hunks"] { hunks_replay.push(arg) }
+    assert_eq(console_text(command(hunks_replay, 0)), hunks)
+    hunks_replay.push("--focus-changes")
+    ignore(command(hunks_replay, 2))
+    let invalid_hunks = replay.copy()
+    invalid_hunks.push("--source-hunks")
+    ignore(command(invalid_hunks, 2))
     let invalid_focus_replay = replay.copy()
     invalid_focus_replay.push("--focus-changes")
     ignore(command(invalid_focus_replay, 2))

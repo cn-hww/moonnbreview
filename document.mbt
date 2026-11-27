@@ -174,30 +174,10 @@ fn normalize_text(value : Json) -> Unit raise ReviewError {
 /// Parse without silently discarding duplicate keys, extension fields or numbers.
 /// String arrays in defined multiline fields are the only permitted normalization.
 pub fn Document::parse(text : String) -> Document raise ReviewError {
-  let raw = checked_json(text)
-  let fields = object(raw)
-  guard fields.get("nbformat") == Some(Json(4)) &&
-    fields.get("nbformat_minor") == Some(Json(5)) else {
-    raise Invalid(
-      "/nbformat: require format 4.5; convert older files explicitly and assign stable IDs",
-    )
+  match Document::validate(text) {
+    Ok(document) => document
+    Err(diagnostic) => raise Invalid(diagnostic.render())
   }
-  guard fields.get("cells") is Some(Array(cells)) && cells.length() <= 5000 else {
-    raise Invalid("/cells: require an array with at most 5000 cells")
-  }
-  let book = @nbformat.Notebook::from_json(raw) catch {
-    e => raise Invalid("notebook: \{Repr(e)}")
-  }
-  normalize_text(raw)
-  let exported = book.to_json() catch {
-    e => raise Invalid("notebook export: \{Repr(e)}")
-  }
-  guard canonical(raw) == canonical(exported) else {
-    raise Invalid(
-      "unsupported normalization would change data; use exact representable numeric values and explicit fields",
-    )
-  }
-  { book, }
 }
 
 ///|

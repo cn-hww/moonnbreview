@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Opt-in exhaustive source line hunks with structured line evidence, complete
+  separated edits, final-LF/CRLF handling, explicit budgets and file/Git/batch replay.
+- Structured notebook validation codes, exact field pointers where unambiguous,
+  JSON syntax positions, repair hints and a portable `validate` command.
+- Pinned public notebook corpus with 17 accepted/refused cases and a reproducible
+  four-target acceptance artifact pack, included in three-OS CI.
+
 - Automatic changed-Notebook discovery between pinned Git endpoints, optional
   manifests on Git batch commands, explicit add/delete rename representation,
   frozen CI manifest snapshots and empty/error review handling.

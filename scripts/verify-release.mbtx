@@ -60,6 +60,12 @@ async fn main {
   let version = field(manifest, "version")
   assert_eq(field(manifest, "license"), "MIT")
   let required = ["moon.mod", "moon.pkg", "LICENSE", "README.md", "THIRD_PARTY.md", "CHANGELOG.md", "CONTRIBUTING.md", "pkg.generated.mbti", "git/pkg.generated.mbti", "junit/pkg.generated.mbti", "fixtures/upstream/LICENSE", "fixtures/upstream/test4.ipynb", "docs/install.md", "docs/ci.md", "docs/release.md", "scripts/verify-consumer.mbtx"]
+  for path in ["source_hunks.mbt", "diagnostic.mbt", "docs/source-hunks.md", "docs/diagnostics.md", "docs/acceptance.md", "scripts/verify-acceptance.mbtx", "scripts/prepare-corpus.mbtx", "fixtures/corpus/README.md", "fixtures/corpus/notebook-LICENSE", "fixtures/corpus/expected.json"] { required.push(path) }
+  guard @json.parse(@fs.read_file("fixtures/corpus/expected.json").text()) is Array(corpus) else { fail("expected corpus manifest") }
+  for entry in corpus {
+    guard entry is Object(row) && row["path"] is String(path) else { fail("invalid corpus entry") }
+    required.push(path)
+  }
   for path in required { guard @fs.exists(path) else { fail("missing source distribution file: " + path) } }
   for (entry, label) in [("main", "moonnbreview"), ("batch", "moonnbreview-batch"), ("git-review", "moonnbreview-git"), ("git-batch", "moonnbreview-git-batch")] {
     assert_eq(command(repo, "moon", ["run", "--deny-warn", "--target", "wasm", "cmd/" + entry, "--", "--version"]), label + " " + version + "\n")

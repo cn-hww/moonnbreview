@@ -36,11 +36,16 @@ fn markdown_change(value : Json) -> Change raise ReviewError {
 /// previews, safe fences and optional first-difference focus as single reviews.
 /// Total output is capped at 1M units, refusing instead of dropping entries.
 /// Works without retained inputs; JSON, bundle and gate outcomes are unchanged.
+/// source_hunks=true shows all paired source edits, excluding focus_changes.
 pub fn BatchReview::to_markdown(
   self : BatchReview,
   preview_chars~ : Int32 = 240,
   focus_changes~ : Bool = false,
+  source_hunks~ : Bool = false,
 ) -> String raise ReviewError {
+  guard !(source_hunks && focus_changes) else {
+    raise Invalid("source_hunks and focus_changes are mutually exclusive")
+  }
   guard preview_chars >= 32 && preview_chars <= 4096 else {
     raise Invalid("preview_chars must be 32..4096; use JSON for full evidence")
   }
@@ -115,6 +120,7 @@ pub fn BatchReview::to_markdown(
             j + 1,
             preview_chars,
             focus_changes,
+            source_hunks,
             heading="####",
           )
         }

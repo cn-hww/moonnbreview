@@ -1,0 +1,128 @@
+----
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn cli(target : String, args : Array[String], expected : Int) -> String {
+  let argv = ["run", "--deny-warn", "--target", target, "cmd/main", "--"]
+  for arg in args { argv.push(arg) }
+  let result = @shell.Cmd("moon", argv).output(timeout_ms=300000, max_output_bytes=16000000)
+  guard result.exit_code() == expected else {
+    println(result.stdout()); println(result.stderr())
+    fail("acceptance CLI failed: " + args.join(" "))
+  }
+  result.stdout().replace_all(old="\r\n", new="\n")
+}
+
+fn fields(value : Json) -> Map[String, Json] raise {
+  guard value is Object(map) else { fail("expected corpus object") }
+  map
+}
+
+fn string(value : Json) -> String raise {
+  guard value is String(s) else { fail("expected corpus string") }
+  s
+}
+
+fn edited(source : String, label : String) -> String raise {
+  let root = fields(@json.parse(source, preserve_number_repr=true))
+  guard root["cells"] is Array(cells) && cells.length() > 0 else { fail("empty demo fixture") }
+  let first = fields(cells[0])
+  let original = match first["source"] {
+    String(s) => s
+    Array(lines) => lines.map(string).join("")
+    _ => fail("invalid demo source")
+  }
+  // Simulated edits are clearly labeled. Real notebook payloads remain present.
+  first["source"] = Json("acceptance-" + label + "-start\n" + "shared context\n".repeat(12) + original + "\n" + "shared context\n".repeat(12) + "acceptance-" + label + "-middle\n" + "shared context\n".repeat(12) + "acceptance-" + label + "-end")
+  Json(root).stringify()
+}
+
+async fn main {
+  let args = @env.args()
+  guard args.length() >= 2 && args.length() <= 3 && (args.length() == 2 || ["--portable", "--native"].contains(args[2])) else { fail("usage: verify-acceptance.mbtx NEW_OUTPUT_DIR [--portable|--native]") }
+  let out = args[1]
+  guard !out.is_empty() && !(@fs.exists(out)) else { fail("choose a fresh output directory; existing artifacts are never overwritten") }
+  let targets = if args.length() == 2 { ["wasm", "wasm-gc", "js", "native"] } else if args[2] == "--portable" { ["wasm", "wasm-gc", "js"] } else { ["native"] }
+  guard @json.parse(@fs.read_file("fixtures/corpus/expected.json").text(), preserve_number_repr=true) is Array(entries) else { fail("expected corpus manifest array") }
+  let originals : Array[(String, Bytes)] = []
+  for entry in entries {
+    let row = fields(entry)
+    let path = string(row["path"])
+    let result = @shell.Cmd("git", ["hash-object", "--no-filters", path]).output()
+    result.check()
+    assert_eq(result.stdout().trim().to_owned(), string(row["git_blob_sha1"]))
+    originals.push((path, @fs.read_file(path).binary()))
+  }
+  @fs.mkdir(out, recursive=true)
+  let demo = @fs.read_file("fixtures/corpus/test4.5.ipynb").text()
+  let old = out + "/simulated-old.ipynb"
+  let new = out + "/simulated-new.ipynb"
+  @fs.write_file(old, edited(demo, "old"))
+  @fs.write_file(new, edited(demo, "new"))
+  let rows : Array[Json] = []
+  let summary = StringBuilder()
+  summary.write_string("# Notebook acceptance results\n\nThese are executed results, not a general compatibility claim. Simulated source edits retain the pinned upstream payloads.\n\n| Target | Accepted | Refused |\n| --- | ---: | ---: |\n")
+  let mut baseline_report : String? = None
+  let mut baseline_markdown : String? = None
+  for target in targets {
+    let mut accepted = 0
+    let mut refused = 0
+    for i, entry in entries {
+      let row = fields(entry)
+      let path = string(row["path"])
+      let expected = fields(row["validation"])
+      let valid = expected["valid"] == Json(true)
+      let actual_text = cli(target, ["validate", path], if valid { 0 } else { 2 })
+      let actual = @json.parse(actual_text)
+      assert_eq(actual, row["validation"])
+      let filename = target + "-" + i.to_string()
+      @fs.write_file(out + "/" + filename + "-validation.json", actual_text)
+      if valid {
+        accepted += 1
+        let bundle = cli(target, ["bundle", path, path], 0)
+        let root = fields(@json.parse(bundle, preserve_number_repr=true))
+        let canonical_path = out + "/" + filename + "-canonical.ipynb"
+        @fs.write_file(canonical_path, root["old"].stringify())
+        // Accepted normalization is idempotent, including all retained payloads.
+        assert_eq(cli(target, ["bundle", canonical_path, canonical_path], 0), bundle)
+        let bundle_path = out + "/" + filename + "-bundle.json"
+        @fs.write_file(bundle_path, bundle)
+        let report = cli(target, ["review", path, path], 0)
+        assert_eq(cli(target, ["replay", bundle_path], 0), report)
+        let report_root = fields(@json.parse(report))
+        assert_eq(report_root["changes"], Json::array([]))
+        assert_eq(report_root["suppressed"], Json::array([]))
+      } else { refused += 1 }
+      rows.push({"target":Json(target), "path":Json(path), "validation":actual})
+    }
+    // Recovery after the rejected corpus must not taint a subsequent document.
+    ignore(cli(target, ["validate", "fixtures/corpus/test4.5.ipynb"], 0))
+    let bundle = cli(target, ["bundle", old, new], 0)
+    let bundle_path = out + "/" + target + "-source-bundle.json"
+    @fs.write_file(bundle_path, bundle)
+    let report = cli(target, ["review", old, new], 0)
+    assert_eq(cli(target, ["replay", bundle_path], 0), report)
+    let markdown = cli(target, ["check", old, new, "--format", "markdown", "--source-hunks"], 1)
+    assert_eq(cli(target, ["replay", bundle_path, "--format", "markdown", "--source-hunks"], 0), markdown)
+    for marker in ["+acceptance-new-start", "+acceptance-new-middle", "+acceptance-new-end", "-acceptance-old-start", "-acceptance-old-middle", "-acceptance-old-end", "\\ No newline at end of file"] { assert_true(markdown.contains(marker)) }
+    assert_true(markdown.split("~~~diff").collect().length() >= 4)
+    match baseline_report { None => baseline_report = Some(report); Some(text) => assert_eq(report, text) }
+    match baseline_markdown { None => baseline_markdown = Some(markdown); Some(text) => assert_eq(markdown, text) }
+    @fs.write_file(out + "/" + target + "-source-report.json", report)
+    @fs.write_file(out + "/" + target + "-source-review.md", markdown)
+    summary.write_string("| " + target + " | " + accepted.to_string() + " | " + refused.to_string() + " |\n")
+    println(target + ": " + accepted.to_string() + " accepted, " + refused.to_string() + " refused; round trips, hunks and replay executed")
+  }
+  for (path, original) in originals { assert_eq(@fs.read_file(path).binary(), original) }
+  @fs.write_file(out + "/coverage.json", Json(rows).stringify(indent=2) + "\n")
+  @fs.write_file(out + "/README.md", summary.to_string())
+  // Completion marker written last; an interrupted run remains visibly incomplete.
+  @fs.write_file(out + "/run.json", ({"format":"moonnbreview/acceptance-1", "complete":true, "targets":Json(targets), "corpus_entries":Json(entries.length())} : Json).stringify() + "\n")
+  println("Acceptance artifacts complete: " + out)
+}

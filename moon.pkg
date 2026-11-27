@@ -1,6 +1,7 @@
 import {
   "moonrockz/notebooks/nbformat",
   "moonbitlang/core/json",
+  "moonbitlang/core/diff",
 }
 
 import {

@@ -26,7 +26,7 @@ pub fn BatchReview::exit_code(Self) -> Int32
 pub fn BatchReview::from_bundle(String) -> Self raise ReviewError
 pub fn BatchReview::to_bundle(Self) -> String raise ReviewError
 pub fn BatchReview::to_json(Self) -> String
-pub fn BatchReview::to_markdown(Self, preview_chars? : Int32, focus_changes? : Bool) -> String raise ReviewError
+pub fn BatchReview::to_markdown(Self, preview_chars? : Int32, focus_changes? : Bool, source_hunks? : Bool) -> String raise ReviewError
 
 #derive(@debug.Debug)
 pub struct Change {
@@ -39,6 +39,7 @@ pub struct Change {
 }
 pub fn Change::mime_category(Self) -> MimeCategory?
 pub fn Change::mime_key(Self) -> String?
+pub fn Change::source_hunks(Self, context? : Int32) -> Array[SourceHunk]? raise ReviewError
 
 #derive(Eq, @debug.Debug)
 pub(all) enum ChangeKind {
@@ -63,7 +64,19 @@ pub fn Comparison::suppressed(Self) -> Array[Change]
 pub fn Comparison::to_bundle(Self) -> String raise ReviewError
 pub fn Comparison::to_html(Self, group_mime? : Bool) -> String raise ReviewError
 pub fn Comparison::to_json(Self) -> String raise ReviewError
-pub fn Comparison::to_markdown(Self, preview_chars? : Int32, focus_changes? : Bool) -> String raise ReviewError
+pub fn Comparison::to_markdown(Self, preview_chars? : Int32, focus_changes? : Bool, source_hunks? : Bool) -> String raise ReviewError
+
+#derive(Eq, @debug.Debug)
+pub struct Diagnostic {
+  code : String
+  path : String
+  message : String
+  hint : String
+  line : Int32?
+  column : Int32?
+}
+pub fn Diagnostic::render(Self) -> String
+pub fn Diagnostic::to_json(Self) -> String
 
 pub struct Document {
   // private fields
@@ -71,6 +84,7 @@ pub struct Document {
 pub fn Document::notebook(Self) -> @nbformat.Notebook
 pub fn Document::parse(String) -> Self raise ReviewError
 pub fn Document::to_string(Self) -> String raise ReviewError
+pub fn Document::validate(String) -> Result[Self, Diagnostic]
 
 pub struct FileManifest {
   // private fields
@@ -136,6 +150,25 @@ pub(all) struct ReviewPair {
   id : String
   old_path : String
   new_path : String
+}
+
+pub struct SourceHunk {
+  header : String
+  lines : Array[SourceLine]
+}
+
+pub struct SourceLine {
+  kind : SourceLineKind
+  text : String
+  old_line : Int32?
+  new_line : Int32?
+}
+
+#derive(Eq, @debug.Debug)
+pub(all) enum SourceLineKind {
+  Context
+  Added
+  Removed
 }
 
 // Type aliases
